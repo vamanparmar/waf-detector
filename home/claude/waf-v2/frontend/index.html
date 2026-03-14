@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WAF · IDS · IPS Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════════
+   RESET & VARIABLES
+═══════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060b10;
+  --s1:#0a1520;
+  --s2:#0d1c2b;
+  --s3:#112236;
+  --b1:#1a3448;
+  --b2:#1e4060;
+  --acc:#00e5ff;
+  --acc2:#00ff9d;
+  --warn:#ffb300;
+  --danger:#ff3d5a;
+  --muted:#3d6070;
+  --text:#b0cfe0;
+  --text2:#7899ad;
+  --white:#e8f4ff;
+  --mono:'JetBrains Mono',monospace;
+  --head:'Orbitron',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:13px;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+::selection{background:rgba(0,229,255,.2);color:var(--white)}
+
+/* ═══ BACKGROUND ═══ */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,229,255,.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 80% 80%, rgba(0,255,157,.03) 0%, transparent 60%),
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,229,255,.025) 39px,rgba(0,229,255,.025) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,229,255,.025) 39px,rgba(0,229,255,.025) 40px);
+  pointer-events:none;z-index:0;
+}
+
+/* ═══ LAYOUT ═══ */
+.wrap{
+  position:relative;z-index:1;
+  max-width:960px;margin:0 auto;
+  padding:2.5rem 1.5rem 6rem;
+}
+
+/* ═══ TOP BAR ═══ */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--b1);
+  padding-bottom:1rem;margin-bottom:2.5rem;
+  font-size:.7rem;color:var(--muted);letter-spacing:.1em;
+  animation:fadeDown .5s ease both;
+}
+.topbar-logo{
+  font-family:var(--head);font-size:.85rem;
+  color:var(--acc);letter-spacing:.15em;
+}
+.topbar-right{display:flex;gap:1.5rem;align-items:center}
+.dot{
+  display:inline-block;width:7px;height:7px;
+  border-radius:50%;background:var(--acc2);
+  box-shadow:0 0 8px var(--acc2);
+  animation:blink 2s ease infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ═══ HERO ═══ */
+.hero{text-align:center;margin-bottom:2.5rem;animation:fadeDown .5s .05s ease both}
+.hero-label{
+  display:inline-block;
+  font-size:.65rem;letter-spacing:.2em;color:var(--acc);
+  border:1px solid rgba(0,229,255,.3);
+  padding:.3rem 1rem;margin-bottom:1.2rem;
+  background:rgba(0,229,255,.04);
+}
+.hero h1{
+  font-family:var(--head);
+  font-size:clamp(1.6rem,4vw,2.8rem);
+  font-weight:900;letter-spacing:.05em;
+  line-height:1.15;
+  background:linear-gradient(135deg,var(--white) 0%,var(--acc) 60%,var(--acc2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:.6rem;
+}
+.hero-sub{
+  font-size:.78rem;color:var(--text2);letter-spacing:.04em;
+  line-height:1.7;
+}
+
+/* ═══ SCANNER PANEL ═══ */
+.scanner{
+  background:var(--s1);
+  border:1px solid var(--b2);
+  padding:1.8rem;
+  margin-bottom:1.5rem;
+  position:relative;
+  overflow:hidden;
+  animation:fadeUp .5s .1s ease both;
+}
+.scanner::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--acc),var(--acc2),transparent);
+}
+.scanner::after{
+  content:'SCAN ENGINE v3.1';
+  position:absolute;top:.5rem;right:1rem;
+  font-size:.58rem;color:var(--muted);letter-spacing:.12em;
+}
+
+.scan-row{display:flex;gap:.6rem}
+.url-wrap{flex:1;position:relative}
+.url-prefix{
+  position:absolute;left:.9rem;top:50%;transform:translateY(-50%);
+  color:var(--muted);font-size:.8rem;pointer-events:none;
+}
+#urlInput{
+  width:100%;
+  background:var(--bg);
+  border:1px solid var(--b2);
+  color:var(--white);
+  font-family:var(--mono);font-size:.88rem;
+  padding:.8rem .9rem .8rem 2rem;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+  caret-color:var(--acc);
+}
+#urlInput::placeholder{color:var(--muted)}
+#urlInput:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,229,255,.08)}
+
+.scan-btn{
+  background:linear-gradient(135deg,var(--acc),var(--acc2));
+  color:var(--bg);
+  border:none;
+  font-family:var(--head);font-size:.7rem;font-weight:700;
+  letter-spacing:.12em;
+  padding:.8rem 1.6rem;
+  cursor:pointer;
+  transition:all .2s;
+  white-space:nowrap;
+  position:relative;overflow:hidden;
+}
+.scan-btn::before{
+  content:'';
+  position:absolute;inset:0;
+  background:rgba(255,255,255,.1);
+  transform:translateX(-100%);
+  transition:transform .3s;
+}
+.scan-btn:hover::before{transform:translateX(0)}
+.scan-btn:hover{box-shadow:0 0 20px rgba(0,229,255,.4)}
+.scan-btn:active{transform:scale(.97)}
+.scan-btn:disabled{
+  background:var(--s3);color:var(--muted);
+  cursor:not-allowed;box-shadow:none;
+}
+
+.examples{
+  margin-top:.9rem;font-size:.7rem;color:var(--muted);
+}
+.examples .ex{
+  color:var(--acc2);cursor:pointer;margin:0 .3rem;
+  transition:color .15s;
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;
+}
+.examples .ex:hover{color:var(--white)}
+
+/* ═══ PROBE STATUS ═══ */
+.probe-status{
+  display:none;
+  background:var(--s1);border:1px solid var(--b1);
+  padding:1.2rem 1.4rem;margin-bottom:1.5rem;
+  animation:fadeUp .3s ease both;
+}
+.probe-status.show{display:block}
+.probe-title{
+  font-size:.65rem;letter-spacing:.15em;color:var(--muted);
+  margin-bottom:.8rem;
+}
+.probe-items{display:flex;flex-direction:column;gap:.45rem}
+.probe-item{
+  display:flex;align-items:center;gap:.8rem;
+  font-size:.76rem;
+}
+.probe-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.probe-dot.idle   {background:var(--muted)}
+.probe-dot.running{background:var(--warn);box-shadow:0 0 6px var(--warn);animation:blink .6s ease infinite}
+.probe-dot.done   {background:var(--acc2);box-shadow:0 0 6px var(--acc2)}
+.probe-dot.fail   {background:var(--danger)}
+.probe-label{flex:1;color:var(--text2)}
+.probe-result{color:var(--muted);font-size:.7rem}
+
+/* ═══ ERROR ═══ */
+.error-box{
+  display:none;
+  background:rgba(255,61,90,.07);border:1px solid rgba(255,61,90,.4);
+  padding:1rem 1.2rem;margin-bottom:1.5rem;
+  color:var(--danger);font-size:.8rem;line-height:1.6;
+}
+.error-box.show{display:block}
+
+/* ═══ RESULTS ═══ */
+#results{display:none;animation:fadeUp .4s ease both}
+#results.show{display:block}
+
+/* ═══ STATS ROW ═══ */
+.stats-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:1px;background:var(--b1);
+  border:1px solid var(--b1);
+  margin-bottom:1.5rem;
+}
+.stat{background:var(--s1);padding:.9rem 1rem}
+.stat-label{font-size:.6rem;letter-spacing:.12em;color:var(--muted);margin-bottom:.35rem;text-transform:uppercase}
+.stat-value{font-size:.9rem;color:var(--white);word-break:break-all}
+.stat-value.ok   {color:var(--acc2)}
+.stat-value.warn {color:var(--warn)}
+.stat-value.bad  {color:var(--danger)}
+.stat-value.info {color:var(--acc)}
+
+/* ═══ VERDICT ═══ */
+.verdict{
+  padding:1.4rem 1.6rem;margin-bottom:1.5rem;
+  display:flex;gap:1.2rem;align-items:flex-start;
+  border:1px solid;position:relative;overflow:hidden;
+}
+.verdict.waf{border-color:rgba(0,255,157,.4);background:rgba(0,255,157,.04)}
+.verdict.nowaf{border-color:rgba(61,96,112,.5);background:rgba(61,96,112,.04)}
+.verdict.warn-mode{border-color:rgba(255,179,0,.4);background:rgba(255,179,0,.04)}
+.verdict-glyph{font-size:2rem;flex-shrink:0;margin-top:.1rem}
+.verdict-head{font-family:var(--head);font-size:1rem;font-weight:700;letter-spacing:.05em;margin-bottom:.3rem}
+.verdict.waf     .verdict-head{color:var(--acc2)}
+.verdict.nowaf   .verdict-head{color:var(--muted)}
+.verdict.warn-mode .verdict-head{color:var(--warn)}
+.verdict-meta{font-size:.74rem;color:var(--text2);line-height:1.7}
+
+.blocked-badge{
+  position:absolute;top:.8rem;right:.8rem;
+  font-size:.6rem;letter-spacing:.12em;
+  padding:.25rem .6rem;
+  background:rgba(255,61,90,.15);border:1px solid rgba(255,61,90,.4);
+  color:var(--danger);
+}
+
+/* ═══ SECTION LABEL ═══ */
+.sec-label{
+  font-size:.6rem;letter-spacing:.18em;color:var(--muted);
+  text-transform:uppercase;
+  margin-bottom:.8rem;
+  display:flex;align-items:center;gap:.6rem;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--b1)}
+
+/* ═══ DETECTION CARDS ═══ */
+.det-list{margin-bottom:1.5rem}
+.det-card{
+  background:var(--s1);border:1px solid var(--b1);
+  margin-bottom:.5rem;
+  transition:border-color .2s;
+}
+.det-card:hover{border-color:var(--b2)}
+
+.det-head{
+  display:flex;align-items:center;gap:.9rem;
+  padding:.9rem 1.1rem;cursor:pointer;
+}
+.det-icon{font-size:1.3rem;flex-shrink:0}
+.det-info{flex:1}
+.det-name{font-size:.88rem;font-weight:700;color:var(--white);margin-bottom:.25rem}
+.det-cat{font-size:.65rem;color:var(--muted);letter-spacing:.06em}
+
+.det-right{text-align:right;flex-shrink:0}
+.conf-num{font-size:.88rem;font-weight:700;margin-bottom:.3rem}
+.conf-bar-bg{
+  width:90px;height:3px;
+  background:var(--s3);border-radius:2px;
+  margin-left:auto;overflow:hidden;
+}
+.conf-bar-fill{
+  height:100%;border-radius:2px;
+  width:0%;transition:width 1s ease;
+}
+.ev-count{font-size:.62rem;color:var(--muted);margin-top:.3rem}
+
+.det-chevron{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .2s}
+.det-chevron.open{transform:rotate(180deg)}
+
+.det-body{
+  display:none;
+  padding:.1rem 1.1rem 1rem;
+  border-top:1px solid var(--b1);
+}
+.det-body.open{display:block;animation:fadeUp .2s ease both}
+.det-desc{
+  font-size:.74rem;color:var(--text2);line-height:1.7;
+  margin:.7rem 0 .9rem;
+  padding-left:.8rem;border-left:2px solid var(--b2);
+}
+
+.ev-table{width:100%;border-collapse:collapse}
+.ev-table th{
+  font-size:.6rem;letter-spacing:.1em;color:var(--muted);
+  padding:.3rem .5rem;text-align:left;border-bottom:1px solid var(--b1);
+}
+.ev-table td{
+  font-size:.72rem;padding:.42rem .5rem;
+  border-bottom:1px solid rgba(26,52,72,.5);
+  vertical-align:top;
+}
+.ev-table tr:last-child td{border-bottom:none}
+.ev-table td:nth-child(1){color:var(--acc);width:80px}
+.ev-table td:nth-child(2){color:var(--warn);width:200px;font-size:.68rem}
+.ev-table td:nth-child(3){color:var(--text2);word-break:break-all}
+.ev-table td:nth-child(4){color:var(--acc2);text-align:right;width:50px;font-size:.7rem}
+
+/* ═══ PROBE RESULTS TABLE ═══ */
+.probes-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:.5rem;margin-bottom:1.5rem;
+}
+.probe-cell{
+  background:var(--s1);border:1px solid var(--b1);
+  padding:.8rem;
+}
+.probe-cell-label{font-size:.6rem;letter-spacing:.12em;color:var(--muted);margin-bottom:.4rem}
+.probe-cell-status{font-size:.82rem;font-weight:700}
+.probe-cell-status.ok  {color:var(--acc2)}
+.probe-cell-status.bad {color:var(--danger)}
+.probe-cell-detail{font-size:.65rem;color:var(--muted);margin-top:.25rem}
+
+/* ═══ HEADERS TABLE ═══ */
+.hdr-table{
+  width:100%;border-collapse:collapse;
+  margin-bottom:1.5rem;
+}
+.hdr-table tr{border-bottom:1px solid rgba(26,52,72,.6)}
+.hdr-table tr:last-child{border-bottom:none}
+.hdr-table tr:hover td{background:var(--s2)}
+.hdr-table td{padding:.5rem .6rem;vertical-align:top}
+.hdr-table td:first-child{
+  color:var(--acc);width:230px;
+  font-size:.7rem;white-space:nowrap;opacity:.85;
+}
+.hdr-table td:last-child{
+  color:var(--text);font-size:.72rem;
+  word-break:break-all;opacity:.8;
+}
+
+/* ═══ SSL / DNS GRID ═══ */
+.meta-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:.5rem;margin-bottom:1.5rem;
+}
+.meta-box{
+  background:var(--s1);border:1px solid var(--b1);
+  padding:.9rem 1rem;
+}
+.meta-box-title{
+  font-size:.6rem;letter-spacing:.14em;color:var(--muted);
+  margin-bottom:.7rem;padding-bottom:.4rem;
+  border-bottom:1px solid var(--b1);
+}
+.meta-row{display:flex;justify-content:space-between;
+  gap:.5rem;margin-bottom:.3rem;font-size:.7rem}
+.meta-row-k{color:var(--muted)}
+.meta-row-v{color:var(--text);text-align:right;word-break:break-all;max-width:60%}
+
+/* ═══ FOOTER ═══ */
+footer{
+  text-align:center;padding:3rem 0 1rem;
+  font-size:.65rem;color:var(--muted);letter-spacing:.1em;
+}
+footer span{color:var(--acc)}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+@keyframes fadeUp  {from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none}}
+@keyframes spin    {to{transform:rotate(360deg)}}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:600px){
+  .scan-row{flex-direction:column}
+  .probes-grid{grid-template-columns:1fr}
+  .meta-grid{grid-template-columns:1fr}
+  .ev-table td:nth-child(2){display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-logo">WAFSCANNER</div>
+    <div class="topbar-right">
+      <span><span class="dot"></span> ENGINE ONLINE</span>
+      <span id="clock">--:--:--</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">FIREWALL INTELLIGENCE SYSTEM</div>
+    <h1>WAF · IDS · IPS<br>DETECTOR</h1>
+    <p class="hero-sub">
+      Multi-probe HTTP fingerprinting · Header / Cookie / Body analysis<br>
+      IP range matching · SSL inspection · Attack-probe confirmation
+    </p>
+  </div>
+
+  <!-- SCANNER -->
+  <div class="scanner">
+    <div class="scan-row">
+      <div class="url-wrap">
+        <span class="url-prefix">⊳</span>
+        <input id="urlInput" type="text" placeholder="target-domain.com or https://...">
+      </div>
+      <button class="scan-btn" id="scanBtn" onclick="startScan()">▶ SCAN</button>
+    </div>
+    <div class="examples">
+      Quick test:
+      <span class="ex" onclick="setUrl('cloudflare.com')">cloudflare.com</span>
+      <span class="ex" onclick="setUrl('aws.amazon.com')">aws.amazon.com</span>
+      <span class="ex" onclick="setUrl('imperva.com')">imperva.com</span>
+      <span class="ex" onclick="setUrl('akamai.com')">akamai.com</span>
+      <span class="ex" onclick="setUrl('sucuri.net')">sucuri.net</span>
+    </div>
+  </div>
+
+  <!-- PROBE STATUS -->
+  <div class="probe-status" id="probeStatus">
+    <div class="probe-title">// SCANNING IN PROGRESS</div>
+    <div class="probe-items" id="probeItems"></div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <!-- Stats -->
+    <div class="stats-row" id="statsRow"></div>
+
+    <!-- Verdict -->
+    <div id="verdictBox"></div>
+
+    <!-- Probe Results -->
+    <div class="sec-label">Probe Results</div>
+    <div class="probes-grid" id="probesGrid"></div>
+
+    <!-- Detections -->
+    <div id="detectionsWrap"></div>
+
+    <!-- SSL + DNS -->
+    <div class="sec-label">Network Intelligence</div>
+    <div class="meta-grid" id="metaGrid"></div>
+
+    <!-- Headers -->
+    <div class="sec-label" id="headersLabel"></div>
+    <table class="hdr-table" id="headersTable"></table>
+
+  </div>
+
+</div>
+
+<footer>
+  WAFSCANNER &nbsp;·&nbsp; <span>Multi-Probe Detection Engine</span> &nbsp;·&nbsp;
+  Authorized Security Testing Only
+</footer>
+
+<script>
+const API = "http://localhost:5000";
+
+// Clock
+setInterval(()=>{
+  document.getElementById("clock").textContent =
+    new Date().toLocaleTimeString("en-GB");
+},1000);
+
+function setUrl(d){ document.getElementById("urlInput").value = d; }
+document.getElementById("urlInput").addEventListener("keydown",e=>{ if(e.key==="Enter") startScan(); });
+
+// ── Probe animation steps ──────────────────────────────────────────────────
+const STEPS = [
+  {key:"dns",   label:"Resolving DNS / IP address"},
+  {key:"ssl",   label:"Inspecting TLS certificate"},
+  {key:"normal",label:"Sending browser-like HTTP probe"},
+  {key:"attack",label:"Sending crafted WAF-trigger probe"},
+  {key:"404",   label:"Probing random 404 path"},
+  {key:"score", label:"Scoring signatures & fingerprints"},
+  {key:"done",  label:"Building report"},
+];
+
+function renderProbeSteps(){
+  document.getElementById("probeItems").innerHTML = STEPS.map((s,i)=>`
+    <div class="probe-item" id="step_${s.key}">
+      <div class="probe-dot idle" id="dot_${s.key}"></div>
+      <div class="probe-label">${s.label}</div>
+      <div class="probe-result" id="res_${s.key}"></div>
+    </div>`).join("");
+}
+
+function stepRun(key){
+  const d = document.getElementById(`dot_${key}`);
+  if(d){ d.className = "probe-dot running"; }
+}
+function stepDone(key, txt="", ok=true){
+  const d = document.getElementById(`dot_${key}`);
+  const r = document.getElementById(`res_${key}`);
+  if(d) d.className = "probe-dot " + (ok ? "done" : "fail");
+  if(r) r.textContent = txt;
+}
+
+// ── Main scan ──────────────────────────────────────────────────────────────
+async function startScan(){
+  const url = document.getElementById("urlInput").value.trim();
+  if(!url){ showError("Enter a target URL or domain."); return; }
+
+  // reset
+  hideError(); hideResults();
+  document.getElementById("scanBtn").disabled = true;
+  renderProbeSteps();
+  show("probeStatus");
+
+  const delays = [0, 400, 800, 1400, 1900, 2500, 3200];
+  STEPS.forEach((s,i)=>{
+    setTimeout(()=>{
+      stepRun(s.key);
+      if(i>0) stepDone(STEPS[i-1].key,"✔");
+    }, delays[i]);
+  });
+
+  try {
+    const res = await fetch(`${API}/api/detect`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url})
+    });
+
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error||"Server error"); }
+    const data = await res.json();
+
+    // Finish step animations
+    STEPS.forEach(s => stepDone(s.key,"✔"));
+
+    setTimeout(()=>{
+      hide("probeStatus");
+      if(!data.success){ showError(data.error||"Unknown error"); return; }
+      renderResults(data);
+    }, 400);
+
+  } catch(err){
+    STEPS.forEach(s => stepDone(s.key,"✘",false));
+    setTimeout(()=>{
+      hide("probeStatus");
+      showError(err.message || "Cannot connect to backend. Ensure Python server is running on port 5000.");
+    },300);
+  } finally {
+    document.getElementById("scanBtn").disabled = false;
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderResults(d){
+  renderStats(d);
+  renderVerdict(d);
+  renderProbes(d);
+  renderDetections(d);
+  renderMeta(d);
+  renderHeaders(d);
+  showResults();
+}
+
+function renderStats(d){
+  const ms = d.elapsed_ms;
+  const msClass = ms < 400 ? "ok" : ms < 1000 ? "warn" : "bad";
+  const tls = d.tls;
+  document.getElementById("statsRow").innerHTML = [
+    {l:"HOST",    v:d.hostname,             c:"info"},
+    {l:"IP",      v:d.dns?.ipv4||"—",       c:""},
+    {l:"STATUS",  v:d.status_code,          c:d.status_code<400?"ok":"bad"},
+    {l:"LATENCY", v:ms+"ms",                c:msClass},
+    {l:"TLS",     v:tls?"✔ HTTPS":"✘ HTTP", c:tls?"ok":"bad"},
+    {l:"SERVER",  v:d.server||"—",          c:""},
+    {l:"REDIRECTS",v:d.redirect_count,      c:""},
+    {l:"HEADERS", v:d.all_headers_count+" found", c:""},
+  ].map(x=>`
+    <div class="stat">
+      <div class="stat-label">${x.l}</div>
+      <div class="stat-value ${x.c}">${x.v}</div>
+    </div>`).join("");
+}
+
+function renderVerdict(d){
+  const el = document.getElementById("verdictBox");
+  if(d.waf_detected){
+    const names = d.detections.map(x=>x.name).join(" · ");
+    el.innerHTML=`
+      <div class="verdict waf">
+        ${d.attack_blocked?'<div class="blocked-badge">ATTACK PROBE BLOCKED</div>':''}
+        <div class="verdict-glyph">🔰</div>
+        <div>
+          <div class="verdict-head">WAF / SECURITY LAYER DETECTED</div>
+          <div class="verdict-meta">
+            ${d.detections.length} system(s) identified &nbsp;|&nbsp; ${names}<br>
+            ${d.attack_blocked?"Attack probe returned HTTP "+d.attack_probe_status+" — confirms active blocking.":"Attack probe not conclusively blocked."}
+          </div>
+        </div>
+      </div>`;
+  } else if(d.attack_blocked){
+    el.innerHTML=`
+      <div class="verdict warn-mode">
+        <div class="verdict-glyph">⚠️</div>
+        <div>
+          <div class="verdict-head">UNKNOWN PROTECTION DETECTED</div>
+          <div class="verdict-meta">
+            Attack probe was blocked (HTTP ${d.attack_probe_status}) but no known WAF signature matched.<br>
+            Possible custom WAF, rate-limiter, or firewall in stealth mode.
+          </div>
+        </div>
+      </div>`;
+  } else {
+    el.innerHTML=`
+      <div class="verdict nowaf">
+        <div class="verdict-glyph">⬜</div>
+        <div>
+          <div class="verdict-head">NO WAF SIGNATURE DETECTED</div>
+          <div class="verdict-meta">
+            No known WAF/IDS/IPS fingerprints found across ${Object.values(d.probes_ok).filter(Boolean).length} probes.<br>
+            May be unprotected, using a custom WAF, or operating in stealth/passthrough mode.
+          </div>
+        </div>
+      </div>`;
+  }
+}
+
+function renderProbes(d){
+  const probeInfo = {
+    normal: { label:"Browser HTTP Probe",  desc:"Standard GET request" },
+    attack: { label:"WAF Trigger Probe",   desc:"Crafted SQLi + XSS payload" },
+    "404":  { label:"404 Path Probe",      desc:"Non-existent path scan" },
+  };
+  document.getElementById("probesGrid").innerHTML =
+    Object.entries(d.probes_ok).map(([k,ok])=>{
+      const info = probeInfo[k] || {label:k, desc:""};
+      const statusClass = ok ? "ok" : "bad";
+      const statusText  = ok ? "SUCCESS" : "FAILED";
+      return `
+        <div class="probe-cell">
+          <div class="probe-cell-label">${info.label}</div>
+          <div class="probe-cell-status ${statusClass}">${statusText}</div>
+          <div class="probe-cell-detail">${info.desc}</div>
+        </div>`;
+    }).join("");
+}
+
+function renderDetections(d){
+  const wrap = document.getElementById("detectionsWrap");
+  if(!d.detections.length){ wrap.innerHTML=""; return; }
+
+  wrap.innerHTML = `
+    <div class="sec-label">Detected Systems (${d.detections.length})</div>
+    <div class="det-list">
+      ${d.detections.map((det,i)=>detCard(det,i)).join("")}
+    </div>`;
+
+  // Animate bars
+  setTimeout(()=>{
+    d.detections.forEach((det,i)=>{
+      const bar = document.getElementById(`bar_${i}`);
+      if(bar){ bar.style.width = det.confidence + "%"; bar.style.background = det.color; }
+    });
+  }, 100);
+}
+
+function detCard(det, i){
+  const evRows = det.evidence.map(e=>`
+    <tr>
+      <td>${e.type}</td>
+      <td>${esc(e.key)}</td>
+      <td>${esc(e.value)}</td>
+      <td>+${e.weight}</td>
+    </tr>`).join("");
+
+  return `
+    <div class="det-card">
+      <div class="det-head" onclick="toggleCard(${i})">
+        <div class="det-icon">${det.icon}</div>
+        <div class="det-info">
+          <div class="det-name" style="color:${det.color}">${det.name}</div>
+          <div class="det-cat">${det.category}</div>
+        </div>
+        <div class="det-right">
+          <div class="conf-num" style="color:${det.color}">${det.confidence}%</div>
+          <div class="conf-bar-bg">
+            <div class="conf-bar-fill" id="bar_${i}"></div>
+          </div>
+          <div class="ev-count">${det.evidence.length} signals · score ${det.score}</div>
+        </div>
+        <div class="det-chevron" id="chev_${i}">▼</div>
+      </div>
+      <div class="det-body" id="body_${i}">
+        <div class="det-desc">${det.description}</div>
+        <table class="ev-table">
+          <thead><tr><th>TYPE</th><th>KEY</th><th>VALUE</th><th>WT</th></tr></thead>
+          <tbody>${evRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function toggleCard(i){
+  const body = document.getElementById(`body_${i}`);
+  const chev = document.getElementById(`chev_${i}`);
+  const open = body.classList.toggle("open");
+  chev.classList.toggle("open", open);
+}
+
+function renderMeta(d){
+  const ssl = d.ssl || {};
+  const dns = d.dns || {};
+
+  document.getElementById("metaGrid").innerHTML = `
+    <div class="meta-box">
+      <div class="meta-box-title">// SSL / TLS CERTIFICATE</div>
+      ${metaRow("Valid", ssl.valid ? "✔ Yes" : "✘ No / Error")}
+      ${metaRow("Issuer", ssl.issuer || "—")}
+      ${metaRow("Subject", ssl.subject || "—")}
+      ${metaRow("Expires", ssl.expires || "—")}
+      ${metaRow("SAN Count", ssl.san ? ssl.san.length : "—")}
+      ${ssl.error ? metaRow("Note", ssl.error.slice(0,60)) : ""}
+    </div>
+    <div class="meta-box">
+      <div class="meta-box-title">// DNS RESOLUTION</div>
+      ${metaRow("IPv4", dns.ipv4 || "—")}
+      ${metaRow("IPv6", dns.ipv6 || "—")}
+      ${metaRow("All IPs", dns.all_ips ? dns.all_ips.join(", ") : "—")}
+      ${metaRow("Redirects", d.redirect_count)}
+      ${metaRow("Final URL", d.final_url ? d.final_url.slice(0,50) : "—")}
+    </div>`;
+}
+
+function metaRow(k, v){
+  return `<div class="meta-row"><span class="meta-row-k">${k}</span><span class="meta-row-v">${esc(String(v))}</span></div>`;
+}
+
+function renderHeaders(d){
+  const hdrs = d.notable_headers || {};
+  const entries = Object.entries(hdrs);
+  document.getElementById("headersLabel").textContent =
+    `Notable Headers (${entries.length})`;
+  document.getElementById("headersTable").innerHTML =
+    entries.map(([k,v])=>`
+      <tr>
+        <td>${esc(k)}</td>
+        <td>${esc(v)}</td>
+      </tr>`).join("");
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function show(id){ document.getElementById(id).classList.add("show") }
+function hide(id){ document.getElementById(id).classList.remove("show") }
+function showResults(){ document.getElementById("results").style.display="block" }
+function hideResults(){ document.getElementById("results").style.display="none" }
+function showError(msg){
+  const el = document.getElementById("errorBox");
+  el.innerHTML = `<strong>⚠ ERROR</strong><br>${esc(msg)}`;
+  el.classList.add("show");
+}
+function hideError(){ document.getElementById("errorBox").classList.remove("show") }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") }
+</script>
+</body>
+</html>
