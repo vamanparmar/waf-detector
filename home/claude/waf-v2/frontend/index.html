@@ -3,704 +3,651 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>WAFSCANNER — Advanced WAF / IDS / IPS Detector</title>
+<title>WAFSCANNER v5 — Advanced WAF / IDS / IPS Detector</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet"/>
 <style>
-/* ═══════════════════════════════════════════════════════════
-   VARIABLES & RESET
-═══════════════════════════════════════════════════════════ */
+/* ─── RESET & TOKENS ────────────────────────────────────────────────────────── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:      #040b12;
-  --bg2:     #070f18;
-  --s1:      #091420;
-  --s2:      #0c1a28;
-  --s3:      #0f2030;
-  --b1:      #162d42;
-  --b2:      #1c3d5c;
-  --b3:      #244d72;
-  --acc:     #00d4f5;
-  --acc2:    #00ff9d;
-  --acc3:    #7c3aed;
-  --warn:    #fbbf24;
-  --danger:  #f43f5e;
-  --muted:   #2e5068;
-  --muted2:  #4a7a96;
-  --text:    #8bb8d0;
-  --text2:   #5a8aa4;
-  --white:   #e2f0fa;
-  --mono:    'JetBrains Mono', monospace;
-  --head:    'Orbitron', sans-serif;
-  --radius:  2px;
+  --bg:    #03090f;
+  --bg2:   #060f18;
+  --s1:    #081422;
+  --s2:    #0b1a2c;
+  --s3:    #0f2236;
+  --b1:    #142c44;
+  --b2:    #1a3c5e;
+  --b3:    #20507c;
+  --acc:   #00d4f5;
+  --acc2:  #00ff9d;
+  --acc3:  #7c3aed;
+  --warn:  #fbbf24;
+  --danger:#f43f5e;
+  --muted: #1e3d56;
+  --muted2:#3a6880;
+  --text:  #7ab4cc;
+  --text2: #4e7f98;
+  --white: #ddf0fa;
+  --mono:  'JetBrains Mono',monospace;
+  --head:  'Orbitron',sans-serif;
+  --r:     2px;
 }
-html { scroll-behavior:smooth; }
-body {
-  background: var(--bg);
-  color:      var(--text);
-  font-family:var(--mono);
-  font-size:  13px;
-  min-height: 100vh;
-  overflow-x: hidden;
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--mono); font-size:13px;
+  min-height:100vh; overflow-x:hidden;
 }
-::selection { background: rgba(0,212,245,.18); color: var(--white); }
+::selection{background:rgba(0,212,245,.18);color:var(--white)}
 
-/* ═══ SCAN LINES OVERLAY ═══ */
-body::before {
+/* ─── AMBIENT BACKGROUND ────────────────────────────────────────────────────── */
+body::before{
   content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
   background:
-    radial-gradient(ellipse 70% 50% at 15% 5%,  rgba(0,212,245,.05) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 85% 90%,  rgba(0,255,157,.04) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 45% at 12% 5%,  rgba(0,212,245,.055) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 55% at 88% 92%,  rgba(0,255,157,.04)  0%, transparent 65%),
     radial-gradient(ellipse 40% 40% at 50% 50%,  rgba(124,58,237,.03) 0%, transparent 70%),
-    repeating-linear-gradient(0deg, transparent, transparent 29px, rgba(0,212,245,.018) 29px, rgba(0,212,245,.018) 30px),
-    repeating-linear-gradient(90deg,transparent, transparent 29px, rgba(0,212,245,.012) 29px, rgba(0,212,245,.012) 30px);
+    repeating-linear-gradient(0deg,  transparent,transparent 29px,rgba(0,212,245,.016) 29px,rgba(0,212,245,.016) 30px),
+    repeating-linear-gradient(90deg, transparent,transparent 29px,rgba(0,212,245,.011) 29px,rgba(0,212,245,.011) 30px);
 }
 
-/* ═══ LAYOUT ═══ */
-.wrap {
+/* ─── LAYOUT ─────────────────────────────────────────────────────────────────── */
+.wrap{
   position:relative; z-index:1;
-  max-width:1040px; margin:0 auto;
-  padding: 2rem 1.4rem 6rem;
+  max-width:1060px; margin:0 auto;
+  padding:2rem 1.4rem 6rem;
 }
 
-/* ═══ TOP BAR ═══ */
-.topbar {
+/* ─── TOP BAR ────────────────────────────────────────────────────────────────── */
+.topbar{
   display:flex; align-items:center; justify-content:space-between;
-  border-bottom: 1px solid var(--b1);
-  padding-bottom: 1rem; margin-bottom: 2.5rem;
-  animation: fadeDown .5s ease both;
+  border-bottom:1px solid var(--b1);
+  padding-bottom:.9rem; margin-bottom:2.5rem;
+  animation:fadeDown .5s ease both;
 }
-.topbar-logo {
-  font-family: var(--head); font-size: .82rem; letter-spacing: .18em;
-  color: var(--acc);
-  display:flex; align-items:center; gap: .6rem;
+.topbar-logo{
+  font-family:var(--head); font-size:.8rem; letter-spacing:.2em; color:var(--acc);
+  display:flex; align-items:center; gap:.55rem;
 }
-.topbar-logo-dot {
-  width:8px; height:8px; border-radius:50%; background:var(--acc2);
-  box-shadow: 0 0 10px var(--acc2); animation: pulse 2s ease infinite;
+.topbar-logo-dot{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--acc2); box-shadow:0 0 10px var(--acc2);
+  animation:pulse 2.2s ease infinite;
 }
-.topbar-right {
-  display:flex; gap:1.4rem; align-items:center;
-  font-size:.67rem; color:var(--muted2); letter-spacing:.08em;
+.topbar-right{
+  display:flex; gap:1.2rem; align-items:center;
+  font-size:.64rem; color:var(--muted2); letter-spacing:.08em;
 }
-.topbar-badge {
-  background: rgba(0,212,245,.07); border:1px solid rgba(0,212,245,.2);
-  padding:.2rem .7rem; color:var(--acc); font-size:.62rem; letter-spacing:.12em;
+.tbadge{
+  background:rgba(0,212,245,.07); border:1px solid rgba(0,212,245,.2);
+  padding:.18rem .65rem; color:var(--acc); font-size:.6rem; letter-spacing:.13em;
 }
-.ver { color: var(--muted); }
+#clockEl,#sigCountEl{color:var(--muted2)}
 
-/* ═══ HERO ═══ */
-.hero { text-align:center; margin-bottom:2rem; animation: fadeDown .5s .06s ease both; }
-.hero-tag {
-  display:inline-flex; align-items:center; gap:.5rem;
-  font-size:.62rem; letter-spacing:.2em; color:var(--acc);
-  border:1px solid rgba(0,212,245,.3);
-  padding:.3rem 1rem; margin-bottom:1.2rem;
-  background: rgba(0,212,245,.04);
+/* ─── HERO ───────────────────────────────────────────────────────────────────── */
+.hero{text-align:center; margin-bottom:1.8rem; animation:fadeDown .5s .06s ease both}
+.hero-tag{
+  display:inline-flex; align-items:center; gap:.45rem;
+  font-size:.6rem; letter-spacing:.22em; color:var(--acc);
+  border:1px solid rgba(0,212,245,.28); padding:.28rem .9rem;
+  margin-bottom:1.1rem; background:rgba(0,212,245,.04);
 }
-.hero h1 {
-  font-family: var(--head);
-  font-size: clamp(1.8rem,4.5vw,3rem);
+.hero h1{
+  font-family:var(--head); font-size:clamp(1.8rem,4.5vw,3rem);
   font-weight:900; letter-spacing:.06em; line-height:1.1;
-  background: linear-gradient(140deg, var(--white) 0%, var(--acc) 55%, var(--acc2) 100%);
+  background:linear-gradient(140deg,var(--white) 0%,var(--acc) 55%,var(--acc2) 100%);
   -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-  background-clip:text;
-  margin-bottom:.6rem;
+  background-clip:text; margin-bottom:.55rem;
 }
-.hero-sub {
-  font-size:.75rem; color:var(--text2); letter-spacing:.04em;
-  line-height:1.8; max-width:600px; margin:0 auto;
+.hero-sub{
+  font-size:.74rem; color:var(--text2); letter-spacing:.04em;
+  line-height:1.85; max-width:580px; margin:0 auto;
 }
-.hero-chips {
-  display:flex; justify-content:center; flex-wrap:wrap; gap:.4rem;
-  margin-top:.9rem;
+.hero-chips{
+  display:flex; justify-content:center; flex-wrap:wrap;
+  gap:.35rem; margin-top:.8rem;
 }
-.chip {
-  font-size:.6rem; letter-spacing:.1em; color:var(--muted2);
-  border:1px solid var(--b1); padding:.2rem .6rem;
-  background: var(--s1);
+.chip{
+  font-size:.58rem; letter-spacing:.1em; color:var(--muted2);
+  border:1px solid var(--b1); padding:.18rem .55rem; background:var(--s1);
 }
 
-/* ═══ SCANNER PANEL ═══ */
-.scanner {
-  background: var(--s1);
-  border: 1px solid var(--b2);
-  padding: 1.6rem;
-  margin-bottom:1.2rem;
+/* ─── SCANNER ────────────────────────────────────────────────────────────────── */
+.scanner{
+  background:var(--s1); border:1px solid var(--b2);
+  padding:1.5rem; margin-bottom:1rem;
   position:relative; overflow:hidden;
-  animation: fadeUp .5s .12s ease both;
+  animation:fadeUp .5s .12s ease both;
 }
-.scanner::before {
+.scanner::before{
   content:''; position:absolute; top:0; left:0; right:0; height:2px;
-  background: linear-gradient(90deg, transparent, var(--acc), var(--acc2), transparent);
+  background:linear-gradient(90deg,transparent,var(--acc),var(--acc2),transparent);
 }
-.scanner-label {
-  font-size:.58rem; letter-spacing:.2em; color:var(--muted2);
-  margin-bottom:1rem;
+.scanner-label{font-size:.56rem; letter-spacing:.22em; color:var(--muted2); margin-bottom:.9rem}
+.scan-row{display:flex; gap:.5rem}
+.url-wrap{flex:1; position:relative}
+.url-pfx{
+  position:absolute; left:.8rem; top:50%; transform:translateY(-50%);
+  color:var(--acc); font-size:.76rem; pointer-events:none; opacity:.55;
 }
-.scan-row { display:flex; gap:.5rem; }
-.url-wrap { flex:1; position:relative; }
-.url-prefix {
-  position:absolute; left:.85rem; top:50%; transform:translateY(-50%);
-  color:var(--acc); font-size:.8rem; pointer-events:none; opacity:.6;
+#urlInput{
+  width:100%; background:var(--bg2); border:1px solid var(--b2);
+  color:var(--white); font-family:var(--mono); font-size:.87rem;
+  padding:.75rem .9rem .75rem 2.1rem; outline:none; border-radius:var(--r);
+  transition:border-color .2s,box-shadow .2s; caret-color:var(--acc);
 }
-#urlInput {
-  width:100%; background:var(--bg2);
-  border:1px solid var(--b2);
-  color:var(--white); font-family:var(--mono); font-size:.88rem;
-  padding:.78rem .9rem .78rem 2.2rem;
-  outline:none; border-radius:var(--radius);
-  transition:border-color .2s, box-shadow .2s;
-  caret-color:var(--acc);
+#urlInput::placeholder{color:var(--muted)}
+#urlInput:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,212,245,.08)}
+.scan-btn{
+  background:linear-gradient(135deg,var(--acc),var(--acc2));
+  color:var(--bg); border:none; font-family:var(--head);
+  font-size:.66rem; font-weight:700; letter-spacing:.15em;
+  padding:.75rem 1.7rem; cursor:pointer; border-radius:var(--r);
+  transition:all .2s; white-space:nowrap; position:relative; overflow:hidden;
 }
-#urlInput::placeholder { color:var(--muted); }
-#urlInput:focus { border-color:var(--acc); box-shadow:0 0 0 3px rgba(0,212,245,.09); }
-
-.scan-btn {
-  background: linear-gradient(135deg, var(--acc), var(--acc2));
-  color: var(--bg); border:none;
-  font-family:var(--head); font-size:.68rem; font-weight:700;
-  letter-spacing:.14em;
-  padding:.78rem 1.8rem;
-  cursor:pointer; border-radius:var(--radius);
-  transition:all .2s; white-space:nowrap;
-  position:relative; overflow:hidden;
-}
-.scan-btn::after {
+.scan-btn::after{
   content:''; position:absolute; inset:0;
-  background:rgba(255,255,255,.12);
-  transform:translateX(-110%); transition:transform .35s;
+  background:rgba(255,255,255,.13); transform:translateX(-110%); transition:transform .35s;
 }
-.scan-btn:hover::after { transform:translateX(0); }
-.scan-btn:hover { box-shadow:0 0 24px rgba(0,212,245,.45); }
-.scan-btn:active { transform:scale(.97); }
-.scan-btn:disabled {
-  background:var(--s3); color:var(--muted); cursor:not-allowed; box-shadow:none;
-}
-.scan-btn.scanning {
-  background: linear-gradient(135deg, var(--muted), var(--muted2));
-  animation: shimmer 1.2s linear infinite;
-}
-
-.examples {
-  margin-top:.8rem; font-size:.68rem; color:var(--muted);
+.scan-btn:hover::after{transform:translateX(0)}
+.scan-btn:hover{box-shadow:0 0 26px rgba(0,212,245,.45)}
+.scan-btn:active{transform:scale(.97)}
+.scan-btn:disabled{background:var(--s3);color:var(--muted);cursor:not-allowed;box-shadow:none}
+.examples{
+  margin-top:.7rem; font-size:.66rem; color:var(--muted);
   display:flex; flex-wrap:wrap; align-items:center; gap:.2rem;
 }
-.ex {
-  color:var(--acc2); cursor:pointer;
+.ex{
+  color:var(--acc2); cursor:pointer; padding:.1rem .2rem;
   text-decoration:underline; text-decoration-style:dotted;
-  text-underline-offset:3px; transition:color .15s; padding:.1rem .2rem;
+  text-underline-offset:3px; transition:color .15s;
 }
-.ex:hover { color:var(--white); }
+.ex:hover{color:var(--white)}
 
-/* ═══ PROGRESS ═══ */
-.progress-panel {
+/* ─── PROGRESS ───────────────────────────────────────────────────────────────── */
+.progress-panel{
   display:none; background:var(--s1); border:1px solid var(--b1);
-  padding:1.2rem 1.4rem; margin-bottom:1.2rem;
+  padding:1.1rem 1.3rem; margin-bottom:1rem;
   animation:fadeUp .3s ease both;
 }
-.progress-panel.show { display:block; }
-.progress-title {
-  font-size:.62rem; letter-spacing:.18em; color:var(--acc);
-  margin-bottom:.9rem; display:flex; align-items:center; gap:.5rem;
+.progress-panel.show{display:block}
+.progress-title{
+  font-size:.6rem; letter-spacing:.18em; color:var(--acc);
+  margin-bottom:.8rem; display:flex; align-items:center; gap:.45rem;
 }
-.progress-title::before {
+.progress-title::before{
   content:''; width:6px; height:6px; border-radius:50%;
   background:var(--acc); box-shadow:0 0 8px var(--acc);
-  animation: pulse .8s ease infinite;
+  animation:pulse .8s ease infinite;
 }
-.step-list { display:flex; flex-direction:column; gap:.4rem; }
-.step-item {
-  display:grid; grid-template-columns: 9px 1fr auto;
-  align-items:center; gap:.75rem; font-size:.74rem; padding:.25rem 0;
+.step-list{display:flex; flex-direction:column; gap:.35rem}
+.step-item{
+  display:grid; grid-template-columns:9px 1fr auto;
+  align-items:center; gap:.7rem; font-size:.72rem; padding:.22rem 0;
 }
-.step-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-.step-dot.idle    { background:var(--muted); }
-.step-dot.running { background:var(--warn); box-shadow:0 0 8px var(--warn); animation:pulse .5s ease infinite; }
-.step-dot.done    { background:var(--acc2); box-shadow:0 0 6px var(--acc2); }
-.step-dot.fail    { background:var(--danger); }
-.step-label { color:var(--text2); }
-.step-result { font-size:.66rem; color:var(--muted2); }
+.sdot{width:9px;height:9px;border-radius:50%}
+.sdot.idle   {background:var(--muted)}
+.sdot.running{background:var(--warn);box-shadow:0 0 8px var(--warn);animation:pulse .55s ease infinite}
+.sdot.done   {background:var(--acc2);box-shadow:0 0 6px var(--acc2)}
+.sdot.fail   {background:var(--danger)}
+.slabel{color:var(--text2)}
+.sres{font-size:.64rem;color:var(--muted2)}
+.progbar{height:2px;background:var(--b1);margin-top:.8rem;overflow:hidden}
+.progfill{height:100%;width:0%;transition:width .4s ease;background:linear-gradient(90deg,var(--acc),var(--acc2))}
 
-/* ═══ PROGRESS BAR ═══ */
-.scan-progress-bar {
-  height:2px; background:var(--b1); margin-top:.9rem; overflow:hidden;
-}
-.scan-progress-fill {
-  height:100%; width:0%; transition:width .4s ease;
-  background:linear-gradient(90deg, var(--acc), var(--acc2));
-}
-
-/* ═══ ERROR ═══ */
-.error-box {
+/* ─── ERROR ──────────────────────────────────────────────────────────────────── */
+.error-box{
   display:none;
-  background: rgba(244,63,94,.07); border:1px solid rgba(244,63,94,.35);
-  padding:.9rem 1.1rem; margin-bottom:1.2rem;
-  color:var(--danger); font-size:.78rem; line-height:1.7;
-  border-radius:var(--radius);
+  background:rgba(244,63,94,.07); border:1px solid rgba(244,63,94,.32);
+  padding:.85rem 1rem; margin-bottom:1rem;
+  color:var(--danger); font-size:.76rem; line-height:1.75;
 }
-.error-box.show { display:block; }
+.error-box.show{display:block}
 
-/* ═══ RESULTS ═══ */
-#results { display:none; animation:fadeUp .4s ease both; }
-#results.show { display:block; }
+/* ─── RESULTS ────────────────────────────────────────────────────────────────── */
+#results{display:none; animation:fadeUp .4s ease both}
+#results.show{display:block}
 
-/* ═══ STATS STRIP ═══ */
-.stats-strip {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-  gap:1px; background:var(--b1);
-  border:1px solid var(--b1);
-  margin-bottom:1.2rem;
+/* ─── EXPORT BAR ─────────────────────────────────────────────────────────────── */
+.export-bar{display:flex;gap:.4rem;justify-content:flex-end;margin-bottom:1rem}
+.ebtn{
+  font-family:var(--mono); font-size:.62rem; letter-spacing:.1em;
+  color:var(--muted2); background:var(--s1); border:1px solid var(--b1);
+  padding:.3rem .75rem; cursor:pointer; transition:all .18s; border-radius:var(--r);
 }
-.stat { background:var(--s1); padding:.8rem .9rem; }
-.stat-label { font-size:.57rem; letter-spacing:.12em; color:var(--muted); margin-bottom:.3rem; text-transform:uppercase; }
-.stat-val   { font-size:.86rem; color:var(--white); word-break:break-all; font-weight:500; }
-.stat-val.ok   { color:var(--acc2); }
-.stat-val.warn { color:var(--warn); }
-.stat-val.bad  { color:var(--danger); }
-.stat-val.info { color:var(--acc); }
+.ebtn:hover{border-color:var(--b2);color:var(--acc)}
 
-/* ═══ SECURITY SCORE ═══ */
-.sec-score-wrap {
+/* ─── STATS STRIP ────────────────────────────────────────────────────────────── */
+.stats-strip{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(115px,1fr));
+  gap:1px; background:var(--b1); border:1px solid var(--b1); margin-bottom:1rem;
+}
+.stat{background:var(--s1);padding:.75rem .85rem}
+.stat-lbl{font-size:.55rem;letter-spacing:.12em;color:var(--muted);margin-bottom:.28rem;text-transform:uppercase}
+.stat-val{font-size:.84rem;color:var(--white);word-break:break-all;font-weight:500}
+.stat-val.ok   {color:var(--acc2)}
+.stat-val.warn {color:var(--warn)}
+.stat-val.bad  {color:var(--danger)}
+.stat-val.info {color:var(--acc)}
+
+/* ─── SECURITY SCORE BAR ─────────────────────────────────────────────────────── */
+.sec-bar-wrap{
   background:var(--s1); border:1px solid var(--b1);
-  padding:.8rem 1rem; margin-bottom:1.2rem;
+  padding:.75rem 1rem; margin-bottom:1rem;
   display:flex; align-items:center; gap:1rem;
 }
-.sec-score-label { font-size:.6rem; letter-spacing:.14em; color:var(--muted); white-space:nowrap; }
-.sec-score-bar   { flex:1; height:4px; background:var(--s3); border-radius:2px; overflow:hidden; }
-.sec-score-fill  { height:100%; border-radius:2px; transition:width 1.2s ease; }
-.sec-score-val   { font-size:.76rem; font-weight:700; white-space:nowrap; }
+.sec-bar-label{font-size:.58rem;letter-spacing:.14em;color:var(--muted);white-space:nowrap}
+.sec-bar{flex:1;height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.sec-bar-fill{height:100%;border-radius:2px;transition:width 1.2s ease}
+.sec-bar-val{font-size:.74rem;font-weight:700;white-space:nowrap}
 
-/* ═══ VERDICT ═══ */
-.verdict {
-  padding:1.3rem 1.5rem; margin-bottom:1.2rem;
-  display:flex; gap:1.1rem; align-items:flex-start;
-  border:1px solid; position:relative; overflow:hidden;
-  border-radius:var(--radius);
+/* ─── TECH TAGS ─────────────────────────────────────────────────────────────── */
+.tech-wrap{
+  display:flex; flex-wrap:wrap; gap:.35rem;
+  margin-bottom:1rem;
 }
-.verdict::before {
-  content:''; position:absolute; top:0; left:0; width:3px; height:100%;
-}
-.verdict.waf      { border-color:rgba(0,255,157,.3); background:rgba(0,255,157,.03); }
-.verdict.waf::before { background:var(--acc2); }
-.verdict.nowaf    { border-color:rgba(46,80,104,.6); background:rgba(46,80,104,.04); }
-.verdict.nowaf::before { background:var(--muted); }
-.verdict.warn-mode{ border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.04); }
-.verdict.warn-mode::before { background:var(--warn); }
-
-.verdict-icon  { font-size:1.9rem; flex-shrink:0; margin-top:.1rem; }
-.verdict-head  {
-  font-family:var(--head); font-size:.95rem; font-weight:700;
-  letter-spacing:.05em; margin-bottom:.35rem;
-}
-.verdict.waf      .verdict-head { color:var(--acc2); }
-.verdict.nowaf    .verdict-head { color:var(--muted2); }
-.verdict.warn-mode .verdict-head { color:var(--warn); }
-.verdict-sub   { font-size:.73rem; color:var(--text2); line-height:1.75; }
-
-.badge-blocked {
-  position:absolute; top:.7rem; right:.8rem;
-  font-size:.58rem; letter-spacing:.12em;
-  padding:.2rem .55rem;
-  background:rgba(244,63,94,.12); border:1px solid rgba(244,63,94,.4);
-  color:var(--danger);
+.tech-tag{
+  font-size:.6rem; letter-spacing:.08em; color:var(--acc);
+  border:1px solid rgba(0,212,245,.25); padding:.18rem .55rem;
+  background:rgba(0,212,245,.05);
 }
 
-/* ═══ SECTION LABEL ═══ */
-.sec-label {
-  font-size:.58rem; letter-spacing:.2em; color:var(--muted);
-  text-transform:uppercase; margin-bottom:.75rem;
-  display:flex; align-items:center; gap:.6rem;
+/* ─── VERDICT ────────────────────────────────────────────────────────────────── */
+.verdict{
+  padding:1.2rem 1.4rem; margin-bottom:1rem;
+  display:flex; gap:1rem; align-items:flex-start;
+  border:1px solid; position:relative; overflow:hidden; border-radius:var(--r);
 }
-.sec-label::after { content:''; flex:1; height:1px; background:var(--b1); }
+.verdict::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%}
+.verdict.waf      {border-color:rgba(0,255,157,.28); background:rgba(0,255,157,.03)}
+.verdict.waf::before{background:var(--acc2)}
+.verdict.nowaf    {border-color:rgba(30,61,86,.7);   background:rgba(30,61,86,.04)}
+.verdict.nowaf::before{background:var(--muted)}
+.verdict.warn-mode{border-color:rgba(251,191,36,.28);background:rgba(251,191,36,.04)}
+.verdict.warn-mode::before{background:var(--warn)}
+.verdict-icon{font-size:1.8rem;flex-shrink:0;margin-top:.08rem}
+.verdict-head{
+  font-family:var(--head); font-size:.9rem; font-weight:700;
+  letter-spacing:.05em; margin-bottom:.32rem;
+}
+.verdict.waf      .verdict-head{color:var(--acc2)}
+.verdict.nowaf    .verdict-head{color:var(--muted2)}
+.verdict.warn-mode .verdict-head{color:var(--warn)}
+.verdict-sub{font-size:.71rem;color:var(--text2);line-height:1.8}
+.badge-blocked{
+  position:absolute; top:.65rem; right:.75rem;
+  font-size:.56rem; letter-spacing:.12em; padding:.2rem .5rem;
+  background:rgba(244,63,94,.12); border:1px solid rgba(244,63,94,.38); color:var(--danger);
+}
 
-/* ═══ PROBE GRID ═══ */
-.probes-grid {
-  display:grid; grid-template-columns:repeat(3,1fr);
-  gap:.5rem; margin-bottom:1.2rem;
+/* ─── SECTION LABEL ──────────────────────────────────────────────────────────── */
+.sec-label{
+  font-size:.57rem; letter-spacing:.22em; color:var(--muted);
+  text-transform:uppercase; margin-bottom:.7rem;
+  display:flex; align-items:center; gap:.55rem;
 }
-.probe-cell {
+.sec-label::after{content:'';flex:1;height:1px;background:var(--b1)}
+
+/* ─── PROBE GRID ─────────────────────────────────────────────────────────────── */
+.probes-grid{
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:.45rem; margin-bottom:1rem;
+}
+.probe-cell{background:var(--s1);border:1px solid var(--b1);padding:.7rem .8rem}
+.probe-cell-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.28rem}
+.probe-cell-name{font-size:.56rem;letter-spacing:.1em;color:var(--muted)}
+.probe-cell-code{font-size:.66rem;color:var(--muted2)}
+.probe-cell-stat{font-size:.78rem;font-weight:700;margin-bottom:.18rem}
+.probe-cell-stat.ok  {color:var(--acc2)}
+.probe-cell-stat.bad {color:var(--danger)}
+.probe-cell-stat.warn{color:var(--warn)}
+.probe-cell-desc{font-size:.6rem;color:var(--muted)}
+
+/* ─── DETECTION CARDS ────────────────────────────────────────────────────────── */
+.det-list{margin-bottom:1rem}
+.det-card{
   background:var(--s1); border:1px solid var(--b1);
-  padding:.75rem .85rem;
+  margin-bottom:.45rem; transition:border-color .2s; border-radius:var(--r);
 }
-.probe-cell-top  { display:flex; justify-content:space-between; align-items:center; margin-bottom:.3rem; }
-.probe-cell-name { font-size:.58rem; letter-spacing:.1em; color:var(--muted); }
-.probe-cell-code { font-size:.68rem; color:var(--muted2); }
-.probe-cell-stat { font-size:.8rem; font-weight:700; margin-bottom:.2rem; }
-.probe-cell-stat.ok  { color:var(--acc2); }
-.probe-cell-stat.bad { color:var(--danger); }
-.probe-cell-stat.warn{ color:var(--warn); }
-.probe-cell-desc { font-size:.63rem; color:var(--muted); }
+.det-card:hover{border-color:var(--b3)}
+.det-head{display:flex;align-items:center;gap:.75rem;padding:.8rem .95rem;cursor:pointer;user-select:none}
+.det-icon{font-size:1.15rem;flex-shrink:0}
+.det-info{flex:1;min-width:0}
+.det-name{font-size:.83rem;font-weight:700;margin-bottom:.18rem}
+.det-cat{font-size:.6rem;color:var(--muted);letter-spacing:.06em}
+.det-right{text-align:right;flex-shrink:0;min-width:95px}
+.conf-pct{font-size:.86rem;font-weight:700;margin-bottom:.22rem}
+.conf-bar{width:88px;height:3px;background:var(--s3);border-radius:2px;margin-left:auto;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;width:0%;transition:width 1s ease}
+.ev-tag{font-size:.58rem;color:var(--muted);margin-top:.25rem}
+.det-chev{color:var(--muted);font-size:.62rem;flex-shrink:0;transition:transform .2s}
+.det-chev.open{transform:rotate(180deg)}
+.det-body{display:none;padding:.2rem .95rem .9rem;border-top:1px solid var(--b1)}
+.det-body.open{display:block;animation:fadeUp .18s ease both}
+.det-desc{
+  font-size:.7rem;color:var(--text2);line-height:1.8;
+  margin:.6rem 0 .8rem; padding-left:.75rem; border-left:2px solid var(--b2);
+}
+.ev-table{width:100%;border-collapse:collapse}
+.ev-table th{
+  font-size:.56rem;letter-spacing:.1em;color:var(--muted);
+  padding:.26rem .42rem;text-align:left;border-bottom:1px solid var(--b1);
+}
+.ev-table td{
+  font-size:.68rem;padding:.36rem .42rem;
+  border-bottom:1px solid rgba(20,44,68,.5);vertical-align:top;
+}
+.ev-table tr:last-child td{border-bottom:none}
+.ev-table td:nth-child(1){color:var(--acc);  width:82px}
+.ev-table td:nth-child(2){color:var(--warn); width:180px;font-size:.64rem;word-break:break-all}
+.ev-table td:nth-child(3){color:var(--text2);word-break:break-all}
+.ev-table td:nth-child(4){color:var(--acc2); text-align:right;width:40px;font-size:.66rem}
 
-/* ═══ DETECTION CARDS ═══ */
-.det-list { margin-bottom:1.2rem; }
-.det-card {
+/* ─── NETWORK INTEL ──────────────────────────────────────────────────────────── */
+.net-grid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-bottom:1rem}
+.net-box{background:var(--s1);border:1px solid var(--b1);padding:.8rem .9rem}
+.net-box-title{
+  font-size:.57rem;letter-spacing:.16em;color:var(--muted);
+  margin-bottom:.6rem;padding-bottom:.38rem;border-bottom:1px solid var(--b1);
+}
+.net-row{display:flex;justify-content:space-between;gap:.5rem;margin-bottom:.26rem;font-size:.67rem}
+.net-key{color:var(--muted);flex-shrink:0}
+.net-val{color:var(--text);text-align:right;word-break:break-all;max-width:58%}
+.net-val.ok  {color:var(--acc2)}
+.net-val.bad {color:var(--danger)}
+.net-val.info{color:var(--acc)}
+
+/* ─── HEADERS TABLE ──────────────────────────────────────────────────────────── */
+.hdr-table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+.hdr-table tr{border-bottom:1px solid rgba(20,44,68,.65)}
+.hdr-table tr:last-child{border-bottom:none}
+.hdr-table tr:hover td{background:var(--s2)}
+.hdr-table td{padding:.42rem .52rem;vertical-align:top}
+.hdr-table td:first-child{color:var(--acc);width:235px;font-size:.66rem;white-space:nowrap;opacity:.9}
+.hdr-table td:last-child {color:var(--text);font-size:.68rem;word-break:break-all}
+
+/* ─── HISTORY PANEL ──────────────────────────────────────────────────────────── */
+.history-panel{
   background:var(--s1); border:1px solid var(--b1);
-  margin-bottom:.5rem; transition:border-color .2s;
-  border-radius:var(--radius);
+  margin-bottom:1rem; overflow:hidden;
 }
-.det-card:hover { border-color:var(--b3); }
-.det-head {
-  display:flex; align-items:center; gap:.8rem;
-  padding:.85rem 1rem; cursor:pointer; user-select:none;
+.history-toggle{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.65rem 1rem; cursor:pointer; user-select:none;
+  font-size:.6rem; letter-spacing:.14em; color:var(--muted2);
 }
-.det-icon  { font-size:1.2rem; flex-shrink:0; }
-.det-info  { flex:1; min-width:0; }
-.det-name  { font-size:.85rem; font-weight:700; margin-bottom:.2rem; }
-.det-cat   { font-size:.62rem; color:var(--muted); letter-spacing:.06em; }
-.det-right { text-align:right; flex-shrink:0; min-width:100px; }
-.conf-pct  { font-size:.88rem; font-weight:700; margin-bottom:.25rem; }
-.conf-bar  { width:90px; height:3px; background:var(--s3); border-radius:2px; margin-left:auto; overflow:hidden; }
-.conf-fill { height:100%; border-radius:2px; width:0%; transition:width 1s ease; }
-.ev-tag    { font-size:.6rem; color:var(--muted); margin-top:.28rem; }
-.det-chev  { color:var(--muted); font-size:.65rem; flex-shrink:0; transition:transform .2s; }
-.det-chev.open { transform:rotate(180deg); }
+.history-toggle:hover{color:var(--acc)}
+.history-body{display:none;padding:.3rem .5rem .5rem}
+.history-body.open{display:block}
+.hist-row{
+  display:grid; grid-template-columns:140px 1fr auto auto;
+  gap:.5rem; align-items:center;
+  padding:.35rem .5rem; border-bottom:1px solid rgba(20,44,68,.5);
+  font-size:.66rem;
+}
+.hist-row:last-child{border-bottom:none}
+.hist-host{color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-waf{color:var(--text2);font-size:.62rem;overflow:hidden;text-overflow:ellipsis}
+.hist-badge{
+  font-size:.55rem;padding:.16rem .45rem;letter-spacing:.08em;white-space:nowrap;
+}
+.hist-badge.detected{background:rgba(0,255,157,.1);border:1px solid rgba(0,255,157,.3);color:var(--acc2)}
+.hist-badge.clean   {background:rgba(30,61,86,.3);  border:1px solid var(--b1);color:var(--muted2)}
+.hist-ms{color:var(--muted);font-size:.6rem;white-space:nowrap}
 
-.det-body {
-  display:none; padding:.2rem 1rem 1rem;
-  border-top:1px solid var(--b1);
-  animation:fadeUp .18s ease both;
-}
-.det-body.open { display:block; }
-.det-desc {
-  font-size:.72rem; color:var(--text2); line-height:1.75;
-  margin:.65rem 0 .85rem;
-  padding-left:.8rem; border-left:2px solid var(--b2);
-}
-
-.ev-table { width:100%; border-collapse:collapse; }
-.ev-table th {
-  font-size:.58rem; letter-spacing:.1em; color:var(--muted);
-  padding:.28rem .45rem; text-align:left; border-bottom:1px solid var(--b1);
-}
-.ev-table td {
-  font-size:.7rem; padding:.38rem .45rem;
-  border-bottom:1px solid rgba(22,45,66,.5); vertical-align:top;
-}
-.ev-table tr:last-child td { border-bottom:none; }
-.ev-table td:nth-child(1) { color:var(--acc);  width:85px;  }
-.ev-table td:nth-child(2) { color:var(--warn); width:190px; font-size:.66rem; word-break:break-all; }
-.ev-table td:nth-child(3) { color:var(--text2);word-break:break-all; }
-.ev-table td:nth-child(4) { color:var(--acc2); text-align:right; width:44px; font-size:.68rem; }
-
-/* ═══ NETWORK INTEL GRID ═══ */
-.net-grid {
-  display:grid; grid-template-columns:1fr 1fr;
-  gap:.5rem; margin-bottom:1.2rem;
-}
-.net-box {
-  background:var(--s1); border:1px solid var(--b1);
-  padding:.85rem .95rem;
-}
-.net-box-title {
-  font-size:.58rem; letter-spacing:.15em; color:var(--muted);
-  margin-bottom:.65rem; padding-bottom:.4rem;
-  border-bottom:1px solid var(--b1);
-}
-.net-row { display:flex; justify-content:space-between; gap:.5rem; margin-bottom:.28rem; font-size:.69rem; }
-.net-key { color:var(--muted); flex-shrink:0; }
-.net-val { color:var(--text); text-align:right; word-break:break-all; max-width:60%; }
-.net-val.ok   { color:var(--acc2); }
-.net-val.bad  { color:var(--danger); }
-.net-val.info { color:var(--acc); }
-
-/* ═══ HEADERS TABLE ═══ */
-.hdr-table { width:100%; border-collapse:collapse; margin-bottom:1.2rem; }
-.hdr-table tr { border-bottom:1px solid rgba(22,45,66,.6); }
-.hdr-table tr:last-child { border-bottom:none; }
-.hdr-table tr:hover td { background:var(--s2); }
-.hdr-table td { padding:.45rem .55rem; vertical-align:top; }
-.hdr-table td:first-child {
-  color:var(--acc); width:240px; font-size:.68rem;
-  white-space:nowrap; opacity:.9;
-}
-.hdr-table td:last-child {
-  color:var(--text); font-size:.7rem; word-break:break-all;
-}
-
-/* ═══ EXPORT BAR ═══ */
-.export-bar {
-  display:flex; gap:.5rem; justify-content:flex-end;
-  margin-bottom:1.2rem;
-}
-.export-btn {
-  font-family:var(--mono); font-size:.64rem; letter-spacing:.1em;
-  color:var(--muted2); background:var(--s1);
-  border:1px solid var(--b1); padding:.35rem .8rem; cursor:pointer;
-  transition:all .18s; border-radius:var(--radius);
-}
-.export-btn:hover { border-color:var(--b2); color:var(--acc); }
-
-/* ═══ FOOTER ═══ */
-footer {
+/* ─── FOOTER ─────────────────────────────────────────────────────────────────── */
+footer{
   text-align:center; padding:3rem 0 1rem;
-  font-size:.62rem; color:var(--muted); letter-spacing:.1em;
+  font-size:.6rem; color:var(--muted); letter-spacing:.1em;
 }
-footer span { color:var(--acc); }
+footer span{color:var(--acc)}
 
-/* ═══ ANIMATIONS ═══ */
-@keyframes fadeDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:none} }
-@keyframes fadeUp   { from{opacity:0;transform:translateY(12px)}  to{opacity:1;transform:none} }
-@keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.3} }
-@keyframes shimmer  { 0%{filter:brightness(1)} 50%{filter:brightness(1.15)} 100%{filter:brightness(1)} }
+/* ─── KEYFRAMES ──────────────────────────────────────────────────────────────── */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+@keyframes fadeUp  {from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none}}
+@keyframes pulse   {0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ═══ RESPONSIVE ═══ */
-@media(max-width:640px) {
-  .scan-row       { flex-direction:column; }
-  .probes-grid    { grid-template-columns:1fr 1fr; }
-  .net-grid       { grid-template-columns:1fr; }
-  .ev-table td:nth-child(2) { display:none; }
-  .topbar-right   { display:none; }
+/* ─── RESPONSIVE ─────────────────────────────────────────────────────────────── */
+@media(max-width:700px){
+  .scan-row{flex-direction:column}
+  .probes-grid{grid-template-columns:1fr 1fr}
+  .net-grid{grid-template-columns:1fr}
+  .hist-row{grid-template-columns:1fr auto}
+  .hist-waf{display:none}
+  .topbar-right{display:none}
 }
-@media(max-width:400px) {
-  .probes-grid    { grid-template-columns:1fr; }
+@media(max-width:440px){
+  .probes-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- TOP BAR -->
-  <div class="topbar">
-    <div class="topbar-logo">
-      <div class="topbar-logo-dot"></div>
-      WAFSCANNER
-    </div>
-    <div class="topbar-right">
-      <div class="topbar-badge">ENGINE ONLINE</div>
-      <span class="ver" id="clock">--:--:--</span>
-      <span class="ver" id="dbCount"></span>
-    </div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <div class="topbar-logo-dot"></div>WAFSCANNER
   </div>
-
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-tag">
-      <span>◈</span> FIREWALL INTELLIGENCE PLATFORM v4.0
-    </div>
-    <h1>WAF · IDS · IPS<br>DETECTOR</h1>
-    <p class="hero-sub">
-      6-probe HTTP fingerprinting · 19-signature detection engine<br>
-      Header / Cookie / Body / IP-range / ASN analysis · Attack-probe confirmation
-    </p>
-    <div class="hero-chips">
-      <span class="chip">CLOUDFLARE</span>
-      <span class="chip">AWS SHIELD</span>
-      <span class="chip">AKAMAI</span>
-      <span class="chip">IMPERVA</span>
-      <span class="chip">F5 BIG-IP</span>
-      <span class="chip">FORTINET</span>
-      <span class="chip">AZURE WAF</span>
-      <span class="chip">+12 MORE</span>
-    </div>
+  <div class="topbar-right">
+    <div class="tbadge" id="engineStatus">CONNECTING…</div>
+    <span id="clockEl">--:--:--</span>
+    <span id="sigCountEl"></span>
   </div>
-
-  <!-- SCANNER INPUT -->
-  <div class="scanner">
-    <div class="scanner-label">// TARGET ACQUISITION</div>
-    <div class="scan-row">
-      <div class="url-wrap">
-        <span class="url-prefix">⊳</span>
-        <input id="urlInput" type="text"
-               placeholder="example.com  ·  https://target-domain.com/path"
-               autocomplete="off" spellcheck="false"/>
-      </div>
-      <button class="scan-btn" id="scanBtn" onclick="startScan()">▶ SCAN</button>
-    </div>
-    <div class="examples">
-      Quick targets:
-      <span class="ex" onclick="setUrl('cloudflare.com')">cloudflare.com</span>
-      <span class="ex" onclick="setUrl('aws.amazon.com')">aws.amazon.com</span>
-      <span class="ex" onclick="setUrl('imperva.com')">imperva.com</span>
-      <span class="ex" onclick="setUrl('akamai.com')">akamai.com</span>
-      <span class="ex" onclick="setUrl('sucuri.net')">sucuri.net</span>
-      <span class="ex" onclick="setUrl('azure.microsoft.com')">azure.microsoft.com</span>
-    </div>
-  </div>
-
-  <!-- PROGRESS -->
-  <div class="progress-panel" id="progressPanel">
-    <div class="progress-title">SCANNING IN PROGRESS</div>
-    <div class="step-list" id="stepList"></div>
-    <div class="scan-progress-bar">
-      <div class="scan-progress-fill" id="progressFill"></div>
-    </div>
-  </div>
-
-  <!-- ERROR -->
-  <div class="error-box" id="errorBox"></div>
-
-  <!-- RESULTS -->
-  <div id="results">
-
-    <!-- Export -->
-    <div class="export-bar">
-      <button class="export-btn" onclick="exportJSON()">⬇ JSON</button>
-      <button class="export-btn" onclick="exportText()">⬇ TXT REPORT</button>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-strip" id="statsStrip"></div>
-
-    <!-- Security score -->
-    <div class="sec-score-wrap" id="secScoreWrap">
-      <span class="sec-score-label">SECURITY HEADERS</span>
-      <div class="sec-score-bar">
-        <div class="sec-score-fill" id="secScoreFill"></div>
-      </div>
-      <span class="sec-score-val" id="secScoreVal"></span>
-    </div>
-
-    <!-- Verdict -->
-    <div id="verdictBox"></div>
-
-    <!-- Probe results -->
-    <div class="sec-label">Probe Results</div>
-    <div class="probes-grid" id="probesGrid"></div>
-
-    <!-- Detections -->
-    <div id="detectionsWrap"></div>
-
-    <!-- Network intelligence -->
-    <div class="sec-label">Network Intelligence</div>
-    <div class="net-grid" id="netGrid"></div>
-
-    <!-- Notable headers -->
-    <div class="sec-label" id="hdrsLabel"></div>
-    <table class="hdr-table" id="hdrsTable"></table>
-
-  </div>
-
 </div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag"><span>◈</span>FIREWALL INTELLIGENCE PLATFORM v5.0</div>
+  <h1>WAF · IDS · IPS<br>DETECTOR</h1>
+  <p class="hero-sub">
+    8-probe HTTP fingerprinting · 25-signature detection engine<br>
+    Weighted scoring · Security-header grading · Tech fingerprinting
+  </p>
+  <div class="hero-chips">
+    <span class="chip">CLOUDFLARE</span><span class="chip">AWS WAF</span>
+    <span class="chip">AKAMAI</span><span class="chip">IMPERVA</span>
+    <span class="chip">F5 BIG-IP</span><span class="chip">FORTINET</span>
+    <span class="chip">AZURE WAF</span><span class="chip">GOOGLE ARMOR</span>
+    <span class="chip">FASTLY</span><span class="chip">+16 MORE</span>
+  </div>
+</div>
+
+<!-- SCANNER -->
+<div class="scanner">
+  <div class="scanner-label">// TARGET ACQUISITION</div>
+  <div class="scan-row">
+    <div class="url-wrap">
+      <span class="url-pfx">⊳</span>
+      <input id="urlInput" type="text"
+             placeholder="example.com  ·  https://target.domain/path"
+             autocomplete="off" spellcheck="false"/>
+    </div>
+    <button class="scan-btn" id="scanBtn" onclick="startScan()">▶ SCAN</button>
+  </div>
+  <div class="examples">
+    Quick targets:
+    <span class="ex" onclick="setUrl('cloudflare.com')">cloudflare.com</span>
+    <span class="ex" onclick="setUrl('aws.amazon.com')">aws.amazon.com</span>
+    <span class="ex" onclick="setUrl('imperva.com')">imperva.com</span>
+    <span class="ex" onclick="setUrl('akamai.com')">akamai.com</span>
+    <span class="ex" onclick="setUrl('sucuri.net')">sucuri.net</span>
+    <span class="ex" onclick="setUrl('azure.microsoft.com')">azure.microsoft.com</span>
+    <span class="ex" onclick="setUrl('shopify.com')">shopify.com</span>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-panel" id="progressPanel">
+  <div class="progress-title">SCANNING IN PROGRESS</div>
+  <div class="step-list" id="stepList"></div>
+  <div class="progbar"><div class="progfill" id="progFill"></div></div>
+</div>
+
+<!-- ERROR -->
+<div class="error-box" id="errorBox"></div>
+
+<!-- HISTORY (shown before first scan) -->
+<div class="history-panel" id="historyPanel" style="display:none">
+  <div class="history-toggle" onclick="toggleHistory()">
+    <span>// RECENT SCANS</span>
+    <span id="histChev">▼</span>
+  </div>
+  <div class="history-body" id="historyBody"></div>
+</div>
+
+<!-- RESULTS -->
+<div id="results">
+  <div class="export-bar">
+    <button class="ebtn" onclick="exportJSON()">⬇ JSON</button>
+    <button class="ebtn" onclick="exportText()">⬇ TXT REPORT</button>
+  </div>
+
+  <div class="stats-strip"    id="statsStrip"></div>
+  <div class="sec-bar-wrap"   id="secBarWrap"></div>
+  <div class="tech-wrap"      id="techWrap"></div>
+  <div id="verdictBox"></div>
+
+  <div class="sec-label">Probe Results</div>
+  <div class="probes-grid" id="probesGrid"></div>
+
+  <div id="detectionsWrap"></div>
+
+  <div class="sec-label">Network Intelligence</div>
+  <div class="net-grid" id="netGrid"></div>
+
+  <div class="sec-label" id="hdrsLabel"></div>
+  <table class="hdr-table" id="hdrsTable"></table>
+</div>
+
+</div><!-- /wrap -->
+
 <footer>
-  WAFSCANNER v4.0 &nbsp;·&nbsp; <span>19-Signature Detection Engine</span>
+  WAFSCANNER v5.0 &nbsp;·&nbsp;
+  <span>25-Signature Detection Engine</span>
   &nbsp;·&nbsp; Authorised Security Testing Only
 </footer>
 
 <script>
-/* ──────────────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
    CONFIG
-────────────────────────────────────────────────────────────────────────── */
+═══════════════════════════════════════════════════════════════════════════ */
 const API = "http://localhost:5000";
 
-/* ──────────────────────────────────────────────────────────────────────────
-   CLOCK + INIT
-────────────────────────────────────────────────────────────────────────── */
+/* ═══ CLOCK ════════════════════════════════════════════════════════════════ */
 setInterval(()=>{
-  document.getElementById("clock").textContent =
+  document.getElementById("clockEl").textContent =
     new Date().toLocaleTimeString("en-GB");
 }, 1000);
 
-// Fetch engine health on load
-(async()=>{
+/* ═══ HEALTH + HISTORY ON LOAD ════════════════════════════════════════════ */
+(async () => {
   try {
-    const r = await fetch(`${API}/api/health`);
-    const d = await r.json();
-    const sig_r = await fetch(`${API}/api/signatures`);
-    const sig_d = await sig_r.json();
-    document.getElementById("dbCount").textContent = `${sig_d.count} SIGS LOADED`;
-  } catch(e) {
-    document.getElementById("dbCount").textContent = "BACKEND OFFLINE";
-    document.getElementById("dbCount").style.color = "var(--danger)";
+    const [hRes, sRes, histRes] = await Promise.all([
+      fetch(`${API}/api/health`),
+      fetch(`${API}/api/signatures`),
+      fetch(`${API}/api/history`),
+    ]);
+    const h    = await hRes.json();
+    const s    = await sRes.json();
+    const hist = await histRes.json();
+
+    document.getElementById("engineStatus").textContent = "ENGINE ONLINE";
+    document.getElementById("engineStatus").style.color = "var(--acc2)";
+    document.getElementById("sigCountEl").textContent   = `${s.count} SIGS`;
+
+    renderHistory(hist.history || []);
+  } catch {
+    document.getElementById("engineStatus").textContent = "BACKEND OFFLINE";
+    document.getElementById("engineStatus").style.color = "var(--danger)";
+    document.getElementById("sigCountEl").textContent   = "CONNECT BACKEND";
   }
 })();
 
-/* ──────────────────────────────────────────────────────────────────────────
-   PROBE STEPS
-────────────────────────────────────────────────────────────────────────── */
+/* ═══ PROBE STEPS ══════════════════════════════════════════════════════════ */
 const STEPS = [
-  { key:"dns",     label:"Resolving DNS & reverse PTR" },
-  { key:"ssl",     label:"Inspecting TLS certificate" },
-  { key:"normal",  label:"Browser-like HTTP probe" },
-  { key:"attack",  label:"Multi-vector attack probe (SQLi/XSS)" },
-  { key:"alt",     label:"Curl/Scanner agent probes" },
-  { key:"404",     label:"Random-path 404 probe" },
-  { key:"score",   label:"Signature scoring & fingerprinting" },
-  { key:"report",  label:"Building report" },
+  { key:"dns",      label:"Resolving DNS + PTR record" },
+  { key:"ssl",      label:"Inspecting TLS certificate" },
+  { key:"browser",  label:"Browser-like HTTP probe (Chrome UA)" },
+  { key:"attack",   label:"Multi-vector attack probe (SQLi/XSS/traversal)" },
+  { key:"agents",   label:"Curl / Nikto / python-requests UA probes" },
+  { key:"methods",  label:"HTTP OPTIONS + HEAD probes" },
+  { key:"score",    label:"Signature scoring & evidence analysis" },
+  { key:"report",   label:"Building report" },
 ];
+const STEP_DELAYS   = [0, 340, 680, 1120, 1640, 2100, 2650, 3300];
+const STEP_PROGRESS = [8,  17,  32,   48,   62,   74,   87,   96];
 
 function renderSteps(){
-  document.getElementById("stepList").innerHTML = STEPS.map((s,i)=>`
+  document.getElementById("stepList").innerHTML = STEPS.map(s=>`
     <div class="step-item" id="step_${s.key}">
-      <div class="step-dot idle" id="dot_${s.key}"></div>
-      <div class="step-label">${s.label}</div>
-      <div class="step-result" id="res_${s.key}"></div>
+      <div class="sdot idle" id="dot_${s.key}"></div>
+      <div class="slabel">${s.label}</div>
+      <div class="sres"  id="res_${s.key}"></div>
     </div>`).join("");
 }
 function stepRun(key){
   const d = document.getElementById(`dot_${key}`);
-  if(d) d.className = "step-dot running";
+  if(d) d.className = "sdot running";
 }
 function stepDone(key, txt="", ok=true){
   const d = document.getElementById(`dot_${key}`);
   const r = document.getElementById(`res_${key}`);
-  if(d) d.className = "step-dot " + (ok ? "done" : "fail");
+  if(d) d.className = "sdot " + (ok?"done":"fail");
   if(r) r.textContent = txt;
 }
 function setProgress(pct){
-  document.getElementById("progressFill").style.width = pct+"%";
+  document.getElementById("progFill").style.width = pct + "%";
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   HELPERS
-────────────────────────────────────────────────────────────────────────── */
+/* ═══ HELPERS ══════════════════════════════════════════════════════════════ */
 function setUrl(d){ document.getElementById("urlInput").value = d; }
 document.getElementById("urlInput").addEventListener("keydown", e=>{
-  if(e.key === "Enter") startScan();
+  if(e.key==="Enter") startScan();
 });
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function show(id){ document.getElementById(id).classList.add("show"); }
 function hide(id){ document.getElementById(id).classList.remove("show"); }
-function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function showError(msg){
   const el = document.getElementById("errorBox");
   el.innerHTML = `<strong>⚠ ERROR</strong><br>${esc(msg)}`;
-  el.classList.add("show");
+  show("errorBox");
 }
-function hideError(){ document.getElementById("errorBox").classList.remove("show"); }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   SCAN
-────────────────────────────────────────────────────────────────────────── */
+/* ═══ SCAN ═════════════════════════════════════════════════════════════════ */
 let lastResult = null;
 
 async function startScan(){
   const url = document.getElementById("urlInput").value.trim();
   if(!url){ showError("Enter a target URL or domain."); return; }
 
-  hideError();
-  document.getElementById("results").style.display = "none";
-  document.getElementById("results").classList.remove("show");
+  hide("errorBox");
+  const res_el = document.getElementById("results");
+  res_el.style.display = "none"; res_el.classList.remove("show");
+  document.getElementById("historyPanel").style.display = "none";
 
   const btn = document.getElementById("scanBtn");
   btn.disabled = true; btn.textContent = "⏳ SCANNING";
 
-  renderSteps();
-  show("progressPanel");
-  setProgress(0);
-
-  // Animated step timing (frontend UX only — real scan runs in parallel on backend)
-  const delays   = [0, 350, 700, 1150, 1650, 2100, 2700, 3400];
-  const progress = [8,  18,  32,   48,   62,   75,   88,   95];
+  renderSteps(); show("progressPanel"); setProgress(0);
 
   STEPS.forEach((s, i)=>{
     setTimeout(()=>{
-      stepRun(s.key);
-      setProgress(progress[i]);
+      stepRun(s.key); setProgress(STEP_PROGRESS[i]);
       if(i > 0) stepDone(STEPS[i-1].key, "✔");
-    }, delays[i]);
+    }, STEP_DELAYS[i]);
   });
 
   try {
-    const res = await fetch(`${API}/api/detect`, {
+    const resp = await fetch(`${API}/api/detect`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({url}),
     });
-    if(!res.ok){
-      const e = await res.json().catch(()=>({}));
-      throw new Error(e.error || `HTTP ${res.status}`);
+    if(!resp.ok){
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.error || `HTTP ${resp.status}`);
     }
-    const data = await res.json();
+    const data = await resp.json();
     lastResult = data;
 
     STEPS.forEach(s => stepDone(s.key, "✔"));
@@ -710,146 +657,165 @@ async function startScan(){
       hide("progressPanel");
       if(!data.success){ showError(data.error || "Unknown error"); return; }
       renderAll(data);
-    }, 450);
+      refreshHistory();
+    }, 400);
 
   } catch(err){
     STEPS.forEach(s => stepDone(s.key, "✘", false));
     setProgress(100);
     setTimeout(()=>{
       hide("progressPanel");
-      showError(err.message || "Cannot connect to backend. Ensure Python server is running on port 5000.");
+      showError(err.message || "Cannot reach backend on port 5000.");
     }, 300);
   } finally {
     btn.disabled = false; btn.textContent = "▶ SCAN";
   }
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   RENDER ALL
-────────────────────────────────────────────────────────────────────────── */
+/* ═══ RENDER ALL ═══════════════════════════════════════════════════════════ */
 function renderAll(d){
   renderStats(d);
-  renderSecScore(d);
+  renderSecBar(d);
+  renderTechTags(d);
   renderVerdict(d);
   renderProbes(d);
   renderDetections(d);
   renderNetwork(d);
   renderHeaders(d);
   const el = document.getElementById("results");
-  el.style.display = "block";
-  el.classList.add("show");
+  el.style.display = "block"; el.classList.add("show");
 }
 
 /* Stats strip */
 function renderStats(d){
   const ms = d.elapsed_ms;
-  const msC = ms < 500 ? "ok" : ms < 1200 ? "warn" : "bad";
+  const msC = ms<500?"ok":ms<1300?"warn":"bad";
   document.getElementById("statsStrip").innerHTML = [
-    { l:"HOST",        v:d.hostname,                     c:"info" },
-    { l:"IP",          v:d.dns?.ipv4||"—",               c:"" },
-    { l:"STATUS",      v:d.status_code,                  c:d.status_code<400?"ok":"bad" },
-    { l:"LATENCY",     v:ms+"ms",                        c:msC },
-    { l:"TLS",         v:d.tls?"✔ HTTPS":"✘ HTTP",       c:d.tls?"ok":"bad" },
-    { l:"SERVER",      v:d.server||"—",                  c:"" },
-    { l:"REDIRECTS",   v:d.redirect_count,               c:"" },
-    { l:"HEADERS",     v:d.all_headers_count+" found",   c:"" },
-    { l:"CDN HINT",    v:d.cdn_hint||"—",                c:d.cdn_hint?"info":"" },
-    { l:"SCAN TIME",   v:new Date(d.timestamp||Date.now()).toLocaleTimeString("en-GB"), c:"" },
+    {l:"HOST",      v:d.hostname,                       c:"info"},
+    {l:"IP",        v:d.dns?.ipv4||"—",                 c:""},
+    {l:"STATUS",    v:d.status_code,                    c:d.status_code<400?"ok":"bad"},
+    {l:"LATENCY",   v:ms+"ms",                          c:msC},
+    {l:"TLS",       v:d.tls?"✔ HTTPS":"✘ HTTP",         c:d.tls?"ok":"bad"},
+    {l:"SERVER",    v:d.server||"—",                    c:""},
+    {l:"REDIRECTS", v:d.redirect_count,                 c:""},
+    {l:"CDN HINT",  v:d.cdn_hint||"—",                  c:d.cdn_hint?"info":""},
+    {l:"HEADERS",   v:d.all_headers_count+" found",     c:""},
+    {l:"SCAN TIME", v:new Date(d.timestamp||Date.now()).toLocaleTimeString("en-GB"), c:""},
   ].map(x=>`
     <div class="stat">
-      <div class="stat-label">${x.l}</div>
+      <div class="stat-lbl">${x.l}</div>
       <div class="stat-val ${x.c}">${esc(String(x.v))}</div>
     </div>`).join("");
 }
 
-/* Security score bar */
-function renderSecScore(d){
-  const score = d.security_score ?? 0;
-  const color = score >= 70 ? "var(--acc2)" : score >= 40 ? "var(--warn)" : "var(--danger)";
-  document.getElementById("secScoreFill").style.cssText = `width:${score}%;background:${color}`;
-  const valEl = document.getElementById("secScoreVal");
-  valEl.textContent = score + "% (" + secScoreGrade(score) + ")";
-  valEl.style.color = color;
+/* Security header score bar */
+function renderSecBar(d){
+  const sec   = d.security || {};
+  const score = sec.score ?? 0;
+  const grade = sec.grade ?? "—";
+  const color = score>=75?"var(--acc2)":score>=45?"var(--warn)":"var(--danger)";
+  const missing = (sec.missing||[]).slice(0,4).join(", ");
+  document.getElementById("secBarWrap").innerHTML = `
+    <span class="sec-bar-label">SECURITY HEADERS</span>
+    <div class="sec-bar">
+      <div class="sec-bar-fill" id="secFill" style="width:0%;background:${color}"></div>
+    </div>
+    <span class="sec-bar-val" style="color:${color}">${score}% &nbsp; Grade ${grade}</span>
+    ${missing?`<span style="font-size:.6rem;color:var(--muted);white-space:nowrap">Missing: ${esc(missing)}…</span>`:""}`;
+  setTimeout(()=>{
+    const f = document.getElementById("secFill");
+    if(f) f.style.width = score+"%";
+  }, 80);
 }
-function secScoreGrade(s){ return s>=80?"STRONG":s>=60?"MODERATE":s>=40?"WEAK":"POOR"; }
+
+/* Technology tags */
+function renderTechTags(d){
+  const wrap = document.getElementById("techWrap");
+  const techs = d.technologies || [];
+  if(!techs.length){ wrap.innerHTML=""; return; }
+  wrap.innerHTML = techs.map(t=>`<span class="tech-tag">${esc(t)}</span>`).join("");
+}
 
 /* Verdict */
 function renderVerdict(d){
   const el = document.getElementById("verdictBox");
+  const blocked = d.attack_blocked || d.nikto_blocked;
+  const bstatus = d.attack_blocked ? d.probe_statuses?.attack : d.probe_statuses?.nikto;
+  const rateNote = d.rate_limited ? `<br>⚡ Rate-limiting detected${d.retry_after?` (Retry-After: ${d.retry_after}s)`:""}.`:"";
+  const uaNote   = d.ua_discrimination ? `<br>⚠ UA discrimination: curl/bots blocked, browser allowed.`:"";
+
   if(d.waf_detected){
     const names = d.detections.map(x=>x.name).join(" · ");
-    const blocked = d.attack_blocked || d.scanner_blocked;
-    const blockStatus = d.attack_blocked ? d.attack_probe_status : d.scanner_probe_status;
     el.innerHTML=`
       <div class="verdict waf">
-        ${blocked?`<div class="badge-blocked">ATTACK PROBE BLOCKED ▸ HTTP ${blockStatus}</div>`:""}
+        ${blocked?`<div class="badge-blocked">ATTACK BLOCKED ▸ HTTP ${bstatus}</div>`:""}
         <div class="verdict-icon">🔰</div>
         <div>
           <div class="verdict-head">WAF / SECURITY LAYER DETECTED</div>
           <div class="verdict-sub">
             ${d.detections.length} system(s) identified &nbsp;|&nbsp; ${esc(names)}<br>
-            ${blocked
-              ? `Attack / scanner probe returned HTTP ${blockStatus} — confirms active blocking.`
-              : "Blocking not conclusively confirmed by probe response codes."}
-            ${d.cdn_hint ? `<br>PTR record suggests: <strong style="color:var(--acc)">${esc(d.cdn_hint)}</strong>` : ""}
+            ${blocked?`Attack/scanner probe returned HTTP ${bstatus} — confirms active blocking.`:"Blocking not conclusively confirmed by probe response codes."}
+            ${d.cdn_hint?`<br>PTR record suggests: <strong style="color:var(--acc)">${esc(d.cdn_hint)}</strong>`:""}
+            ${rateNote}${uaNote}
           </div>
         </div>
       </div>`;
-  } else if(d.attack_blocked || d.scanner_blocked){
-    const st = d.attack_blocked ? d.attack_probe_status : d.scanner_probe_status;
+  } else if(blocked){
     el.innerHTML=`
       <div class="verdict warn-mode">
         <div class="verdict-icon">⚠️</div>
         <div>
           <div class="verdict-head">UNKNOWN PROTECTION DETECTED</div>
           <div class="verdict-sub">
-            Probe was blocked (HTTP ${st}) but no known WAF signature matched.<br>
-            Likely a custom WAF, rate-limiter, or firewall operating in stealth mode.
+            Probe blocked (HTTP ${bstatus}) but no known WAF signature matched.<br>
+            Likely a custom WAF, rate-limiter, or firewall in stealth mode.
+            ${rateNote}${uaNote}
           </div>
         </div>
       </div>`;
   } else {
-    const probeCount = Object.values(d.probes_ok).filter(Boolean).length;
+    const ok = Object.values(d.probes_ok||{}).filter(Boolean).length;
     el.innerHTML=`
       <div class="verdict nowaf">
         <div class="verdict-icon">⬜</div>
         <div>
           <div class="verdict-head">NO WAF SIGNATURE DETECTED</div>
           <div class="verdict-sub">
-            No known WAF/IDS/IPS fingerprints found across ${probeCount} successful probes.<br>
-            May be unprotected, using a custom/private WAF, or operating in passthrough/stealth mode.
+            No known WAF/IDS/IPS fingerprints found across ${ok} successful probes.<br>
+            May be unprotected, using a custom WAF, or operating in passthrough/stealth mode.
+            ${rateNote}${uaNote}
           </div>
         </div>
       </div>`;
   }
 }
 
-/* Probe results */
+/* Probe results grid */
 const PROBE_META = {
-  normal:  { label:"Browser Probe",     desc:"Standard GET, browser UA" },
-  attack:  { label:"Attack Probe",      desc:"SQLi + XSS + traversal payload" },
-  "404":   { label:"404 Probe",         desc:"Randomised nonexistent path" },
-  curl:    { label:"Curl-Agent Probe",  desc:"curl/8.4 user-agent" },
-  scanner: { label:"Scanner Probe",     desc:"Nikto/2.1.6 user-agent" },
-  options: { label:"OPTIONS Probe",     desc:"HTTP OPTIONS method" },
+  browser:{ label:"Browser",       desc:"Chrome UA GET"              },
+  attack: { label:"Attack Probe",  desc:"SQLi/XSS/traversal payload" },
+  "404":  { label:"404 Probe",     desc:"Randomised nonexistent path"},
+  curl:   { label:"Curl",          desc:"curl/8.7.1 UA"              },
+  nikto:  { label:"Nikto",         desc:"Nikto/2.1.6 scanner UA"     },
+  python: { label:"Python",        desc:"python-requests UA"          },
+  options:{ label:"OPTIONS",       desc:"HTTP OPTIONS method"         },
+  head:   { label:"HEAD",          desc:"HTTP HEAD method"            },
 };
-
 function renderProbes(d){
   document.getElementById("probesGrid").innerHTML =
-    Object.entries(d.probes_ok).map(([k, ok])=>{
-      const m = PROBE_META[k] || { label:k, desc:"" };
+    Object.entries(d.probes_ok||{}).map(([k,ok])=>{
+      const m    = PROBE_META[k] || {label:k,desc:""};
       const code = d.probe_statuses?.[k];
-      const codeTxt = code != null ? `HTTP ${code}` : "—";
-      const isBlock = [403,406,429,503,412,418].includes(code);
-      const stClass = !ok ? "bad" : isBlock ? "warn" : "ok";
-      const stText  = !ok ? "FAILED" : isBlock ? "BLOCKED" : "SUCCESS";
+      const isBlock = [403,406,412,418,429,444,451,503].includes(code);
+      const cls  = !ok?"bad":isBlock?"warn":"ok";
+      const txt  = !ok?"FAILED":isBlock?"BLOCKED":"SUCCESS";
       return `
         <div class="probe-cell">
           <div class="probe-cell-top">
             <div class="probe-cell-name">${m.label}</div>
-            <div class="probe-cell-code">${codeTxt}</div>
+            <div class="probe-cell-code">${code!=null?"HTTP "+code:"—"}</div>
           </div>
-          <div class="probe-cell-stat ${stClass}">${stText}</div>
+          <div class="probe-cell-stat ${cls}">${txt}</div>
           <div class="probe-cell-desc">${m.desc}</div>
         </div>`;
     }).join("");
@@ -858,7 +824,7 @@ function renderProbes(d){
 /* Detection cards */
 function renderDetections(d){
   const wrap = document.getElementById("detectionsWrap");
-  if(!d.detections.length){ wrap.innerHTML=""; return; }
+  if(!d.detections?.length){ wrap.innerHTML=""; return; }
   wrap.innerHTML = `
     <div class="sec-label">Detected Systems (${d.detections.length})</div>
     <div class="det-list">
@@ -866,10 +832,10 @@ function renderDetections(d){
     </div>`;
   setTimeout(()=>{
     d.detections.forEach((det,i)=>{
-      const bar = document.getElementById(`cfill_${i}`);
-      if(bar){ bar.style.width=det.confidence+"%"; bar.style.background=det.color; }
+      const f = document.getElementById(`cfill_${i}`);
+      if(f){ f.style.width=det.confidence+"%"; f.style.background=det.color; }
     });
-  }, 100);
+  }, 80);
 }
 
 function detCard(det, i){
@@ -906,61 +872,88 @@ function detCard(det, i){
 }
 
 function toggleCard(i){
-  const body = document.getElementById(`body_${i}`);
-  const chev = document.getElementById(`chev_${i}`);
-  const open = body.classList.toggle("open");
-  chev.classList.toggle("open", open);
+  const b = document.getElementById(`body_${i}`);
+  const c = document.getElementById(`chev_${i}`);
+  const o = b.classList.toggle("open");
+  c.classList.toggle("open", o);
 }
 
 /* Network intelligence */
 function renderNetwork(d){
-  const ssl = d.ssl  || {};
-  const dns = d.dns  || {};
-  function row(k,v,c=""){ return `<div class="net-row"><span class="net-key">${k}</span><span class="net-val ${c}">${esc(String(v))}</span></div>`; }
+  const ssl = d.ssl || {}, dns = d.dns || {};
+  const row = (k,v,c="") =>
+    `<div class="net-row"><span class="net-key">${k}</span><span class="net-val ${c}">${esc(String(v??'—'))}</span></div>`;
 
   document.getElementById("netGrid").innerHTML = `
     <div class="net-box">
       <div class="net-box-title">// SSL / TLS CERTIFICATE</div>
-      ${row("Valid",      ssl.valid?"✔ Yes":"✘ No / Error", ssl.valid?"ok":"bad")}
-      ${row("TLS Version",ssl.version||"—", ssl.version?"info":"")}
-      ${row("Issuer",     ssl.issuer||"—")}
-      ${row("Subject",    ssl.subject||"—")}
-      ${row("Expires",    ssl.expires||"—")}
-      ${row("Not Before", ssl.not_before||"—")}
-      ${row("SANs",       ssl.san?.length??0)}
-      ${ssl.error?row("Note",ssl.error.slice(0,70)):""}
+      ${row("Valid",       ssl.valid?"✔ Yes":"✘ No/Error", ssl.valid?"ok":"bad")}
+      ${row("TLS Version", ssl.tls_version||"—",           ssl.tls_version?"info":"")}
+      ${row("Cipher",      ssl.cipher||"—")}
+      ${row("Issuer",      ssl.issuer||"—")}
+      ${row("Subject",     ssl.subject||"—")}
+      ${row("Expires",     ssl.expires||"—")}
+      ${row("Not Before",  ssl.not_before||"—")}
+      ${row("SANs",        ssl.san?.length??0)}
+      ${ssl.error?row("Note", ssl.error.slice(0,65)):""}
     </div>
     <div class="net-box">
       <div class="net-box-title">// DNS RESOLUTION</div>
-      ${row("IPv4",       dns.ipv4||"—", dns.ipv4?"info":"")}
+      ${row("IPv4",       dns.ipv4||"—",    dns.ipv4?"info":"")}
       ${row("IPv6",       dns.ipv6||"—")}
       ${row("PTR Record", dns.ptr||"—")}
       ${row("All IPs",    dns.all_ips?.join(", ")||"—")}
+      ${row("CDN Hint",   d.cdn_hint||"—",  d.cdn_hint?"info":"")}
       ${row("Redirects",  d.redirect_count)}
-      ${row("Final URL",  (d.final_url||"—").slice(0,55))}
-      ${row("CDN Hint",   d.cdn_hint||"—", d.cdn_hint?"info":"")}
+      ${row("Final URL",  (d.final_url||"—").slice(0,52))}
+      ${row("Rate-Limited", d.rate_limited?"YES":"NO", d.rate_limited?"warn":"")}
     </div>`;
 }
 
-/* Headers */
+/* Headers table */
 function renderHeaders(d){
   const entries = Object.entries(d.notable_headers||{});
   document.getElementById("hdrsLabel").textContent = `Notable Headers (${entries.length})`;
   document.getElementById("hdrsTable").innerHTML = entries.map(([k,v])=>`
-    <tr>
-      <td>${esc(k)}</td>
-      <td>${esc(v)}</td>
-    </tr>`).join("");
+    <tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   EXPORT
-────────────────────────────────────────────────────────────────────────── */
+/* ═══ HISTORY ══════════════════════════════════════════════════════════════ */
+async function refreshHistory(){
+  try {
+    const r = await fetch(`${API}/api/history`);
+    const d = await r.json();
+    renderHistory(d.history||[]);
+  } catch{}
+}
+
+function renderHistory(hist){
+  if(!hist.length) return;
+  const panel = document.getElementById("historyPanel");
+  const body  = document.getElementById("historyBody");
+  panel.style.display = "block";
+  body.innerHTML = hist.slice(0,10).map(h=>`
+    <div class="hist-row">
+      <span class="hist-host">${esc(h.hostname)}</span>
+      <span class="hist-waf">${esc((h.detections||[]).join(", ")||"No WAF")}</span>
+      <span class="hist-badge ${h.waf_detected?"detected":"clean"}">${h.waf_detected?"WAF DETECTED":"CLEAN"}</span>
+      <span class="hist-ms">${h.elapsed_ms}ms</span>
+    </div>`).join("");
+}
+
+let _histOpen = false;
+function toggleHistory(){
+  _histOpen = !_histOpen;
+  document.getElementById("historyBody").classList.toggle("open", _histOpen);
+  document.getElementById("histChev").textContent = _histOpen ? "▲" : "▼";
+}
+
+/* ═══ EXPORT ═══════════════════════════════════════════════════════════════ */
 function exportJSON(){
   if(!lastResult) return;
-  const blob = new Blob([JSON.stringify(lastResult, null, 2)], {type:"application/json"});
+  const b = new Blob([JSON.stringify(lastResult,null,2)],{type:"application/json"});
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(b);
   a.download = `waf-scan-${lastResult.hostname}-${Date.now()}.json`;
   a.click();
 }
@@ -968,36 +961,52 @@ function exportJSON(){
 function exportText(){
   if(!lastResult) return;
   const d = lastResult;
+  const sec = d.security || {};
   const lines = [
-    "═══════════════════════════════════════════════════════",
-    "  WAFSCANNER v4.0  —  Advanced WAF / IDS / IPS Report",
-    "═══════════════════════════════════════════════════════",
-    `  Target   : ${d.url}`,
-    `  Hostname : ${d.hostname}`,
-    `  Scan Time: ${d.timestamp}`,
-    `  IPv4     : ${d.dns?.ipv4||"—"}`,
-    `  Status   : HTTP ${d.status_code}`,
-    `  Latency  : ${d.elapsed_ms}ms`,
-    `  TLS      : ${d.tls?"HTTPS":"HTTP"}`,
-    `  Server   : ${d.server||"—"}`,
-    "───────────────────────────────────────────────────────",
-    `  WAF DETECTED : ${d.waf_detected ? "YES" : "NO"}`,
-    `  ATTACK BLOCKED : ${d.attack_blocked ? "YES (HTTP "+d.attack_probe_status+")" : "NO"}`,
-    `  SCANNER BLOCKED: ${d.scanner_blocked ? "YES (HTTP "+d.scanner_probe_status+")" : "NO"}`,
-    "───────────────────────────────────────────────────────",
-    ...(d.detections.length
-      ? ["  DETECTIONS:", ...d.detections.map(det=>
-          `    [${det.confidence}%] ${det.name} — ${det.category} (score: ${det.score})`
+    "═".repeat(64),
+    "  WAFSCANNER v5.0  —  Advanced WAF / IDS / IPS Report",
+    "═".repeat(64),
+    `  Target      : ${d.url}`,
+    `  Hostname    : ${d.hostname}`,
+    `  Scan Time   : ${d.timestamp}`,
+    `  IPv4        : ${d.dns?.ipv4||"—"}`,
+    `  PTR         : ${d.dns?.ptr||"—"}`,
+    `  CDN Hint    : ${d.cdn_hint||"—"}`,
+    `  Status      : HTTP ${d.status_code}`,
+    `  Latency     : ${d.elapsed_ms}ms`,
+    `  TLS         : ${d.tls?"HTTPS":"HTTP"}`,
+    `  Server      : ${d.server||"—"}`,
+    `  Technologies: ${(d.technologies||[]).join(", ")||"—"}`,
+    "─".repeat(64),
+    `  WAF DETECTED         : ${d.waf_detected?"YES":"NO"}`,
+    `  ATTACK BLOCKED       : ${d.attack_blocked?"YES (HTTP "+d.probe_statuses?.attack+")":"NO"}`,
+    `  NIKTO BLOCKED        : ${d.nikto_blocked?"YES (HTTP "+d.probe_statuses?.nikto+")":"NO"}`,
+    `  UA DISCRIMINATION    : ${d.ua_discrimination?"YES":"NO"}`,
+    `  RATE LIMITED         : ${d.rate_limited?"YES":"NO"}`,
+    `  SEC HEADER GRADE     : ${sec.grade||"—"}  (${sec.score||0}%)`,
+    `  MISSING SEC HEADERS  : ${(sec.missing||[]).join(", ")||"None"}`,
+    "─".repeat(64),
+    "  PROBE RESULTS:",
+    ...Object.entries(d.probe_statuses||{}).map(([k,v])=>
+      `    ${k.padEnd(10)} : HTTP ${v??"-"}`
+    ),
+    "─".repeat(64),
+    ...(d.detections?.length
+      ? ["  DETECTIONS:", ...d.detections.map(dt=>
+          `    [${String(dt.confidence).padStart(2)}%] ${dt.name}  (${dt.category})  score:${dt.score}\n`+
+          dt.evidence.slice(0,5).map(e=>
+            `         ${e.type.padEnd(12)} ${e.key}  →  ${String(e.value).slice(0,60)}  (+${e.weight})`
+          ).join("\n")
         )]
       : ["  No known WAF signatures detected."]),
-    "───────────────────────────────────────────────────────",
+    "─".repeat(64),
     "  NOTABLE HEADERS:",
     ...Object.entries(d.notable_headers||{}).map(([k,v])=>`    ${k}: ${v}`),
-    "═══════════════════════════════════════════════════════",
+    "═".repeat(64),
   ];
-  const blob = new Blob([lines.join("\n")], {type:"text/plain"});
+  const b = new Blob([lines.join("\n")],{type:"text/plain"});
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = URL.createObjectURL(b);
   a.download = `waf-scan-${d.hostname}-${Date.now()}.txt`;
   a.click();
 }
