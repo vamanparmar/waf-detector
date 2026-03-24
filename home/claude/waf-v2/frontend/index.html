@@ -3,405 +3,457 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>WAF · IDS · IPS Detector</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+<title>WAFSCANNER — Advanced WAF / IDS / IPS Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet"/>
 <style>
-/* ═══════════════════════════════════════════════════════
-   RESET & VARIABLES
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   VARIABLES & RESET
+═══════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#060b10;
-  --s1:#0a1520;
-  --s2:#0d1c2b;
-  --s3:#112236;
-  --b1:#1a3448;
-  --b2:#1e4060;
-  --acc:#00e5ff;
-  --acc2:#00ff9d;
-  --warn:#ffb300;
-  --danger:#ff3d5a;
-  --muted:#3d6070;
-  --text:#b0cfe0;
-  --text2:#7899ad;
-  --white:#e8f4ff;
-  --mono:'JetBrains Mono',monospace;
-  --head:'Orbitron',sans-serif;
+  --bg:      #040b12;
+  --bg2:     #070f18;
+  --s1:      #091420;
+  --s2:      #0c1a28;
+  --s3:      #0f2030;
+  --b1:      #162d42;
+  --b2:      #1c3d5c;
+  --b3:      #244d72;
+  --acc:     #00d4f5;
+  --acc2:    #00ff9d;
+  --acc3:    #7c3aed;
+  --warn:    #fbbf24;
+  --danger:  #f43f5e;
+  --muted:   #2e5068;
+  --muted2:  #4a7a96;
+  --text:    #8bb8d0;
+  --text2:   #5a8aa4;
+  --white:   #e2f0fa;
+  --mono:    'JetBrains Mono', monospace;
+  --head:    'Orbitron', sans-serif;
+  --radius:  2px;
 }
-html{scroll-behavior:smooth}
-body{
-  background:var(--bg);
-  color:var(--text);
+html { scroll-behavior:smooth; }
+body {
+  background: var(--bg);
+  color:      var(--text);
   font-family:var(--mono);
-  font-size:13px;
-  min-height:100vh;
-  overflow-x:hidden;
+  font-size:  13px;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
-::selection{background:rgba(0,229,255,.2);color:var(--white)}
+::selection { background: rgba(0,212,245,.18); color: var(--white); }
 
-/* ═══ BACKGROUND ═══ */
-body::before{
-  content:'';
-  position:fixed;inset:0;
+/* ═══ SCAN LINES OVERLAY ═══ */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
   background:
-    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,229,255,.04) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 50% at 80% 80%, rgba(0,255,157,.03) 0%, transparent 60%),
-    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,229,255,.025) 39px,rgba(0,229,255,.025) 40px),
-    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,229,255,.025) 39px,rgba(0,229,255,.025) 40px);
-  pointer-events:none;z-index:0;
+    radial-gradient(ellipse 70% 50% at 15% 5%,  rgba(0,212,245,.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 90%,  rgba(0,255,157,.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%,  rgba(124,58,237,.03) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 29px, rgba(0,212,245,.018) 29px, rgba(0,212,245,.018) 30px),
+    repeating-linear-gradient(90deg,transparent, transparent 29px, rgba(0,212,245,.012) 29px, rgba(0,212,245,.012) 30px);
 }
 
 /* ═══ LAYOUT ═══ */
-.wrap{
-  position:relative;z-index:1;
-  max-width:960px;margin:0 auto;
-  padding:2.5rem 1.5rem 6rem;
+.wrap {
+  position:relative; z-index:1;
+  max-width:1040px; margin:0 auto;
+  padding: 2rem 1.4rem 6rem;
 }
 
 /* ═══ TOP BAR ═══ */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--b1);
-  padding-bottom:1rem;margin-bottom:2.5rem;
-  font-size:.7rem;color:var(--muted);letter-spacing:.1em;
-  animation:fadeDown .5s ease both;
+.topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom: 1px solid var(--b1);
+  padding-bottom: 1rem; margin-bottom: 2.5rem;
+  animation: fadeDown .5s ease both;
 }
-.topbar-logo{
-  font-family:var(--head);font-size:.85rem;
-  color:var(--acc);letter-spacing:.15em;
+.topbar-logo {
+  font-family: var(--head); font-size: .82rem; letter-spacing: .18em;
+  color: var(--acc);
+  display:flex; align-items:center; gap: .6rem;
 }
-.topbar-right{display:flex;gap:1.5rem;align-items:center}
-.dot{
-  display:inline-block;width:7px;height:7px;
-  border-radius:50%;background:var(--acc2);
-  box-shadow:0 0 8px var(--acc2);
-  animation:blink 2s ease infinite;
+.topbar-logo-dot {
+  width:8px; height:8px; border-radius:50%; background:var(--acc2);
+  box-shadow: 0 0 10px var(--acc2); animation: pulse 2s ease infinite;
 }
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-right {
+  display:flex; gap:1.4rem; align-items:center;
+  font-size:.67rem; color:var(--muted2); letter-spacing:.08em;
+}
+.topbar-badge {
+  background: rgba(0,212,245,.07); border:1px solid rgba(0,212,245,.2);
+  padding:.2rem .7rem; color:var(--acc); font-size:.62rem; letter-spacing:.12em;
+}
+.ver { color: var(--muted); }
 
 /* ═══ HERO ═══ */
-.hero{text-align:center;margin-bottom:2.5rem;animation:fadeDown .5s .05s ease both}
-.hero-label{
-  display:inline-block;
-  font-size:.65rem;letter-spacing:.2em;color:var(--acc);
-  border:1px solid rgba(0,229,255,.3);
-  padding:.3rem 1rem;margin-bottom:1.2rem;
-  background:rgba(0,229,255,.04);
+.hero { text-align:center; margin-bottom:2rem; animation: fadeDown .5s .06s ease both; }
+.hero-tag {
+  display:inline-flex; align-items:center; gap:.5rem;
+  font-size:.62rem; letter-spacing:.2em; color:var(--acc);
+  border:1px solid rgba(0,212,245,.3);
+  padding:.3rem 1rem; margin-bottom:1.2rem;
+  background: rgba(0,212,245,.04);
 }
-.hero h1{
-  font-family:var(--head);
-  font-size:clamp(1.6rem,4vw,2.8rem);
-  font-weight:900;letter-spacing:.05em;
-  line-height:1.15;
-  background:linear-gradient(135deg,var(--white) 0%,var(--acc) 60%,var(--acc2) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+.hero h1 {
+  font-family: var(--head);
+  font-size: clamp(1.8rem,4.5vw,3rem);
+  font-weight:900; letter-spacing:.06em; line-height:1.1;
+  background: linear-gradient(140deg, var(--white) 0%, var(--acc) 55%, var(--acc2) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
   background-clip:text;
   margin-bottom:.6rem;
 }
-.hero-sub{
-  font-size:.78rem;color:var(--text2);letter-spacing:.04em;
-  line-height:1.7;
+.hero-sub {
+  font-size:.75rem; color:var(--text2); letter-spacing:.04em;
+  line-height:1.8; max-width:600px; margin:0 auto;
+}
+.hero-chips {
+  display:flex; justify-content:center; flex-wrap:wrap; gap:.4rem;
+  margin-top:.9rem;
+}
+.chip {
+  font-size:.6rem; letter-spacing:.1em; color:var(--muted2);
+  border:1px solid var(--b1); padding:.2rem .6rem;
+  background: var(--s1);
 }
 
 /* ═══ SCANNER PANEL ═══ */
-.scanner{
-  background:var(--s1);
+.scanner {
+  background: var(--s1);
+  border: 1px solid var(--b2);
+  padding: 1.6rem;
+  margin-bottom:1.2rem;
+  position:relative; overflow:hidden;
+  animation: fadeUp .5s .12s ease both;
+}
+.scanner::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, var(--acc), var(--acc2), transparent);
+}
+.scanner-label {
+  font-size:.58rem; letter-spacing:.2em; color:var(--muted2);
+  margin-bottom:1rem;
+}
+.scan-row { display:flex; gap:.5rem; }
+.url-wrap { flex:1; position:relative; }
+.url-prefix {
+  position:absolute; left:.85rem; top:50%; transform:translateY(-50%);
+  color:var(--acc); font-size:.8rem; pointer-events:none; opacity:.6;
+}
+#urlInput {
+  width:100%; background:var(--bg2);
   border:1px solid var(--b2);
-  padding:1.8rem;
-  margin-bottom:1.5rem;
-  position:relative;
-  overflow:hidden;
-  animation:fadeUp .5s .1s ease both;
-}
-.scanner::before{
-  content:'';position:absolute;
-  top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,var(--acc),var(--acc2),transparent);
-}
-.scanner::after{
-  content:'SCAN ENGINE v3.1';
-  position:absolute;top:.5rem;right:1rem;
-  font-size:.58rem;color:var(--muted);letter-spacing:.12em;
-}
-
-.scan-row{display:flex;gap:.6rem}
-.url-wrap{flex:1;position:relative}
-.url-prefix{
-  position:absolute;left:.9rem;top:50%;transform:translateY(-50%);
-  color:var(--muted);font-size:.8rem;pointer-events:none;
-}
-#urlInput{
-  width:100%;
-  background:var(--bg);
-  border:1px solid var(--b2);
-  color:var(--white);
-  font-family:var(--mono);font-size:.88rem;
-  padding:.8rem .9rem .8rem 2rem;
-  outline:none;
-  transition:border-color .2s,box-shadow .2s;
+  color:var(--white); font-family:var(--mono); font-size:.88rem;
+  padding:.78rem .9rem .78rem 2.2rem;
+  outline:none; border-radius:var(--radius);
+  transition:border-color .2s, box-shadow .2s;
   caret-color:var(--acc);
 }
-#urlInput::placeholder{color:var(--muted)}
-#urlInput:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,229,255,.08)}
+#urlInput::placeholder { color:var(--muted); }
+#urlInput:focus { border-color:var(--acc); box-shadow:0 0 0 3px rgba(0,212,245,.09); }
 
-.scan-btn{
-  background:linear-gradient(135deg,var(--acc),var(--acc2));
-  color:var(--bg);
-  border:none;
-  font-family:var(--head);font-size:.7rem;font-weight:700;
-  letter-spacing:.12em;
-  padding:.8rem 1.6rem;
-  cursor:pointer;
-  transition:all .2s;
-  white-space:nowrap;
-  position:relative;overflow:hidden;
+.scan-btn {
+  background: linear-gradient(135deg, var(--acc), var(--acc2));
+  color: var(--bg); border:none;
+  font-family:var(--head); font-size:.68rem; font-weight:700;
+  letter-spacing:.14em;
+  padding:.78rem 1.8rem;
+  cursor:pointer; border-radius:var(--radius);
+  transition:all .2s; white-space:nowrap;
+  position:relative; overflow:hidden;
 }
-.scan-btn::before{
-  content:'';
-  position:absolute;inset:0;
-  background:rgba(255,255,255,.1);
-  transform:translateX(-100%);
-  transition:transform .3s;
+.scan-btn::after {
+  content:''; position:absolute; inset:0;
+  background:rgba(255,255,255,.12);
+  transform:translateX(-110%); transition:transform .35s;
 }
-.scan-btn:hover::before{transform:translateX(0)}
-.scan-btn:hover{box-shadow:0 0 20px rgba(0,229,255,.4)}
-.scan-btn:active{transform:scale(.97)}
-.scan-btn:disabled{
-  background:var(--s3);color:var(--muted);
-  cursor:not-allowed;box-shadow:none;
+.scan-btn:hover::after { transform:translateX(0); }
+.scan-btn:hover { box-shadow:0 0 24px rgba(0,212,245,.45); }
+.scan-btn:active { transform:scale(.97); }
+.scan-btn:disabled {
+  background:var(--s3); color:var(--muted); cursor:not-allowed; box-shadow:none;
+}
+.scan-btn.scanning {
+  background: linear-gradient(135deg, var(--muted), var(--muted2));
+  animation: shimmer 1.2s linear infinite;
 }
 
-.examples{
-  margin-top:.9rem;font-size:.7rem;color:var(--muted);
+.examples {
+  margin-top:.8rem; font-size:.68rem; color:var(--muted);
+  display:flex; flex-wrap:wrap; align-items:center; gap:.2rem;
 }
-.examples .ex{
-  color:var(--acc2);cursor:pointer;margin:0 .3rem;
-  transition:color .15s;
-  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;
+.ex {
+  color:var(--acc2); cursor:pointer;
+  text-decoration:underline; text-decoration-style:dotted;
+  text-underline-offset:3px; transition:color .15s; padding:.1rem .2rem;
 }
-.examples .ex:hover{color:var(--white)}
+.ex:hover { color:var(--white); }
 
-/* ═══ PROBE STATUS ═══ */
-.probe-status{
-  display:none;
-  background:var(--s1);border:1px solid var(--b1);
-  padding:1.2rem 1.4rem;margin-bottom:1.5rem;
+/* ═══ PROGRESS ═══ */
+.progress-panel {
+  display:none; background:var(--s1); border:1px solid var(--b1);
+  padding:1.2rem 1.4rem; margin-bottom:1.2rem;
   animation:fadeUp .3s ease both;
 }
-.probe-status.show{display:block}
-.probe-title{
-  font-size:.65rem;letter-spacing:.15em;color:var(--muted);
-  margin-bottom:.8rem;
+.progress-panel.show { display:block; }
+.progress-title {
+  font-size:.62rem; letter-spacing:.18em; color:var(--acc);
+  margin-bottom:.9rem; display:flex; align-items:center; gap:.5rem;
 }
-.probe-items{display:flex;flex-direction:column;gap:.45rem}
-.probe-item{
-  display:flex;align-items:center;gap:.8rem;
-  font-size:.76rem;
+.progress-title::before {
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:var(--acc); box-shadow:0 0 8px var(--acc);
+  animation: pulse .8s ease infinite;
 }
-.probe-dot{
-  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+.step-list { display:flex; flex-direction:column; gap:.4rem; }
+.step-item {
+  display:grid; grid-template-columns: 9px 1fr auto;
+  align-items:center; gap:.75rem; font-size:.74rem; padding:.25rem 0;
 }
-.probe-dot.idle   {background:var(--muted)}
-.probe-dot.running{background:var(--warn);box-shadow:0 0 6px var(--warn);animation:blink .6s ease infinite}
-.probe-dot.done   {background:var(--acc2);box-shadow:0 0 6px var(--acc2)}
-.probe-dot.fail   {background:var(--danger)}
-.probe-label{flex:1;color:var(--text2)}
-.probe-result{color:var(--muted);font-size:.7rem}
+.step-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.step-dot.idle    { background:var(--muted); }
+.step-dot.running { background:var(--warn); box-shadow:0 0 8px var(--warn); animation:pulse .5s ease infinite; }
+.step-dot.done    { background:var(--acc2); box-shadow:0 0 6px var(--acc2); }
+.step-dot.fail    { background:var(--danger); }
+.step-label { color:var(--text2); }
+.step-result { font-size:.66rem; color:var(--muted2); }
+
+/* ═══ PROGRESS BAR ═══ */
+.scan-progress-bar {
+  height:2px; background:var(--b1); margin-top:.9rem; overflow:hidden;
+}
+.scan-progress-fill {
+  height:100%; width:0%; transition:width .4s ease;
+  background:linear-gradient(90deg, var(--acc), var(--acc2));
+}
 
 /* ═══ ERROR ═══ */
-.error-box{
+.error-box {
   display:none;
-  background:rgba(255,61,90,.07);border:1px solid rgba(255,61,90,.4);
-  padding:1rem 1.2rem;margin-bottom:1.5rem;
-  color:var(--danger);font-size:.8rem;line-height:1.6;
+  background: rgba(244,63,94,.07); border:1px solid rgba(244,63,94,.35);
+  padding:.9rem 1.1rem; margin-bottom:1.2rem;
+  color:var(--danger); font-size:.78rem; line-height:1.7;
+  border-radius:var(--radius);
 }
-.error-box.show{display:block}
+.error-box.show { display:block; }
 
 /* ═══ RESULTS ═══ */
-#results{display:none;animation:fadeUp .4s ease both}
-#results.show{display:block}
+#results { display:none; animation:fadeUp .4s ease both; }
+#results.show { display:block; }
 
-/* ═══ STATS ROW ═══ */
-.stats-row{
+/* ═══ STATS STRIP ═══ */
+.stats-strip {
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-  gap:1px;background:var(--b1);
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:1px; background:var(--b1);
   border:1px solid var(--b1);
-  margin-bottom:1.5rem;
+  margin-bottom:1.2rem;
 }
-.stat{background:var(--s1);padding:.9rem 1rem}
-.stat-label{font-size:.6rem;letter-spacing:.12em;color:var(--muted);margin-bottom:.35rem;text-transform:uppercase}
-.stat-value{font-size:.9rem;color:var(--white);word-break:break-all}
-.stat-value.ok   {color:var(--acc2)}
-.stat-value.warn {color:var(--warn)}
-.stat-value.bad  {color:var(--danger)}
-.stat-value.info {color:var(--acc)}
+.stat { background:var(--s1); padding:.8rem .9rem; }
+.stat-label { font-size:.57rem; letter-spacing:.12em; color:var(--muted); margin-bottom:.3rem; text-transform:uppercase; }
+.stat-val   { font-size:.86rem; color:var(--white); word-break:break-all; font-weight:500; }
+.stat-val.ok   { color:var(--acc2); }
+.stat-val.warn { color:var(--warn); }
+.stat-val.bad  { color:var(--danger); }
+.stat-val.info { color:var(--acc); }
+
+/* ═══ SECURITY SCORE ═══ */
+.sec-score-wrap {
+  background:var(--s1); border:1px solid var(--b1);
+  padding:.8rem 1rem; margin-bottom:1.2rem;
+  display:flex; align-items:center; gap:1rem;
+}
+.sec-score-label { font-size:.6rem; letter-spacing:.14em; color:var(--muted); white-space:nowrap; }
+.sec-score-bar   { flex:1; height:4px; background:var(--s3); border-radius:2px; overflow:hidden; }
+.sec-score-fill  { height:100%; border-radius:2px; transition:width 1.2s ease; }
+.sec-score-val   { font-size:.76rem; font-weight:700; white-space:nowrap; }
 
 /* ═══ VERDICT ═══ */
-.verdict{
-  padding:1.4rem 1.6rem;margin-bottom:1.5rem;
-  display:flex;gap:1.2rem;align-items:flex-start;
-  border:1px solid;position:relative;overflow:hidden;
+.verdict {
+  padding:1.3rem 1.5rem; margin-bottom:1.2rem;
+  display:flex; gap:1.1rem; align-items:flex-start;
+  border:1px solid; position:relative; overflow:hidden;
+  border-radius:var(--radius);
 }
-.verdict.waf{border-color:rgba(0,255,157,.4);background:rgba(0,255,157,.04)}
-.verdict.nowaf{border-color:rgba(61,96,112,.5);background:rgba(61,96,112,.04)}
-.verdict.warn-mode{border-color:rgba(255,179,0,.4);background:rgba(255,179,0,.04)}
-.verdict-glyph{font-size:2rem;flex-shrink:0;margin-top:.1rem}
-.verdict-head{font-family:var(--head);font-size:1rem;font-weight:700;letter-spacing:.05em;margin-bottom:.3rem}
-.verdict.waf     .verdict-head{color:var(--acc2)}
-.verdict.nowaf   .verdict-head{color:var(--muted)}
-.verdict.warn-mode .verdict-head{color:var(--warn)}
-.verdict-meta{font-size:.74rem;color:var(--text2);line-height:1.7}
+.verdict::before {
+  content:''; position:absolute; top:0; left:0; width:3px; height:100%;
+}
+.verdict.waf      { border-color:rgba(0,255,157,.3); background:rgba(0,255,157,.03); }
+.verdict.waf::before { background:var(--acc2); }
+.verdict.nowaf    { border-color:rgba(46,80,104,.6); background:rgba(46,80,104,.04); }
+.verdict.nowaf::before { background:var(--muted); }
+.verdict.warn-mode{ border-color:rgba(251,191,36,.3); background:rgba(251,191,36,.04); }
+.verdict.warn-mode::before { background:var(--warn); }
 
-.blocked-badge{
-  position:absolute;top:.8rem;right:.8rem;
-  font-size:.6rem;letter-spacing:.12em;
-  padding:.25rem .6rem;
-  background:rgba(255,61,90,.15);border:1px solid rgba(255,61,90,.4);
+.verdict-icon  { font-size:1.9rem; flex-shrink:0; margin-top:.1rem; }
+.verdict-head  {
+  font-family:var(--head); font-size:.95rem; font-weight:700;
+  letter-spacing:.05em; margin-bottom:.35rem;
+}
+.verdict.waf      .verdict-head { color:var(--acc2); }
+.verdict.nowaf    .verdict-head { color:var(--muted2); }
+.verdict.warn-mode .verdict-head { color:var(--warn); }
+.verdict-sub   { font-size:.73rem; color:var(--text2); line-height:1.75; }
+
+.badge-blocked {
+  position:absolute; top:.7rem; right:.8rem;
+  font-size:.58rem; letter-spacing:.12em;
+  padding:.2rem .55rem;
+  background:rgba(244,63,94,.12); border:1px solid rgba(244,63,94,.4);
   color:var(--danger);
 }
 
 /* ═══ SECTION LABEL ═══ */
-.sec-label{
-  font-size:.6rem;letter-spacing:.18em;color:var(--muted);
-  text-transform:uppercase;
-  margin-bottom:.8rem;
-  display:flex;align-items:center;gap:.6rem;
+.sec-label {
+  font-size:.58rem; letter-spacing:.2em; color:var(--muted);
+  text-transform:uppercase; margin-bottom:.75rem;
+  display:flex; align-items:center; gap:.6rem;
 }
-.sec-label::after{content:'';flex:1;height:1px;background:var(--b1)}
+.sec-label::after { content:''; flex:1; height:1px; background:var(--b1); }
+
+/* ═══ PROBE GRID ═══ */
+.probes-grid {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  gap:.5rem; margin-bottom:1.2rem;
+}
+.probe-cell {
+  background:var(--s1); border:1px solid var(--b1);
+  padding:.75rem .85rem;
+}
+.probe-cell-top  { display:flex; justify-content:space-between; align-items:center; margin-bottom:.3rem; }
+.probe-cell-name { font-size:.58rem; letter-spacing:.1em; color:var(--muted); }
+.probe-cell-code { font-size:.68rem; color:var(--muted2); }
+.probe-cell-stat { font-size:.8rem; font-weight:700; margin-bottom:.2rem; }
+.probe-cell-stat.ok  { color:var(--acc2); }
+.probe-cell-stat.bad { color:var(--danger); }
+.probe-cell-stat.warn{ color:var(--warn); }
+.probe-cell-desc { font-size:.63rem; color:var(--muted); }
 
 /* ═══ DETECTION CARDS ═══ */
-.det-list{margin-bottom:1.5rem}
-.det-card{
-  background:var(--s1);border:1px solid var(--b1);
-  margin-bottom:.5rem;
-  transition:border-color .2s;
+.det-list { margin-bottom:1.2rem; }
+.det-card {
+  background:var(--s1); border:1px solid var(--b1);
+  margin-bottom:.5rem; transition:border-color .2s;
+  border-radius:var(--radius);
 }
-.det-card:hover{border-color:var(--b2)}
-
-.det-head{
-  display:flex;align-items:center;gap:.9rem;
-  padding:.9rem 1.1rem;cursor:pointer;
+.det-card:hover { border-color:var(--b3); }
+.det-head {
+  display:flex; align-items:center; gap:.8rem;
+  padding:.85rem 1rem; cursor:pointer; user-select:none;
 }
-.det-icon{font-size:1.3rem;flex-shrink:0}
-.det-info{flex:1}
-.det-name{font-size:.88rem;font-weight:700;color:var(--white);margin-bottom:.25rem}
-.det-cat{font-size:.65rem;color:var(--muted);letter-spacing:.06em}
+.det-icon  { font-size:1.2rem; flex-shrink:0; }
+.det-info  { flex:1; min-width:0; }
+.det-name  { font-size:.85rem; font-weight:700; margin-bottom:.2rem; }
+.det-cat   { font-size:.62rem; color:var(--muted); letter-spacing:.06em; }
+.det-right { text-align:right; flex-shrink:0; min-width:100px; }
+.conf-pct  { font-size:.88rem; font-weight:700; margin-bottom:.25rem; }
+.conf-bar  { width:90px; height:3px; background:var(--s3); border-radius:2px; margin-left:auto; overflow:hidden; }
+.conf-fill { height:100%; border-radius:2px; width:0%; transition:width 1s ease; }
+.ev-tag    { font-size:.6rem; color:var(--muted); margin-top:.28rem; }
+.det-chev  { color:var(--muted); font-size:.65rem; flex-shrink:0; transition:transform .2s; }
+.det-chev.open { transform:rotate(180deg); }
 
-.det-right{text-align:right;flex-shrink:0}
-.conf-num{font-size:.88rem;font-weight:700;margin-bottom:.3rem}
-.conf-bar-bg{
-  width:90px;height:3px;
-  background:var(--s3);border-radius:2px;
-  margin-left:auto;overflow:hidden;
-}
-.conf-bar-fill{
-  height:100%;border-radius:2px;
-  width:0%;transition:width 1s ease;
-}
-.ev-count{font-size:.62rem;color:var(--muted);margin-top:.3rem}
-
-.det-chevron{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .2s}
-.det-chevron.open{transform:rotate(180deg)}
-
-.det-body{
-  display:none;
-  padding:.1rem 1.1rem 1rem;
+.det-body {
+  display:none; padding:.2rem 1rem 1rem;
   border-top:1px solid var(--b1);
+  animation:fadeUp .18s ease both;
 }
-.det-body.open{display:block;animation:fadeUp .2s ease both}
-.det-desc{
-  font-size:.74rem;color:var(--text2);line-height:1.7;
-  margin:.7rem 0 .9rem;
-  padding-left:.8rem;border-left:2px solid var(--b2);
-}
-
-.ev-table{width:100%;border-collapse:collapse}
-.ev-table th{
-  font-size:.6rem;letter-spacing:.1em;color:var(--muted);
-  padding:.3rem .5rem;text-align:left;border-bottom:1px solid var(--b1);
-}
-.ev-table td{
-  font-size:.72rem;padding:.42rem .5rem;
-  border-bottom:1px solid rgba(26,52,72,.5);
-  vertical-align:top;
-}
-.ev-table tr:last-child td{border-bottom:none}
-.ev-table td:nth-child(1){color:var(--acc);width:80px}
-.ev-table td:nth-child(2){color:var(--warn);width:200px;font-size:.68rem}
-.ev-table td:nth-child(3){color:var(--text2);word-break:break-all}
-.ev-table td:nth-child(4){color:var(--acc2);text-align:right;width:50px;font-size:.7rem}
-
-/* ═══ PROBE RESULTS TABLE ═══ */
-.probes-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);
-  gap:.5rem;margin-bottom:1.5rem;
-}
-.probe-cell{
-  background:var(--s1);border:1px solid var(--b1);
-  padding:.8rem;
-}
-.probe-cell-label{font-size:.6rem;letter-spacing:.12em;color:var(--muted);margin-bottom:.4rem}
-.probe-cell-status{font-size:.82rem;font-weight:700}
-.probe-cell-status.ok  {color:var(--acc2)}
-.probe-cell-status.bad {color:var(--danger)}
-.probe-cell-detail{font-size:.65rem;color:var(--muted);margin-top:.25rem}
-
-/* ═══ HEADERS TABLE ═══ */
-.hdr-table{
-  width:100%;border-collapse:collapse;
-  margin-bottom:1.5rem;
-}
-.hdr-table tr{border-bottom:1px solid rgba(26,52,72,.6)}
-.hdr-table tr:last-child{border-bottom:none}
-.hdr-table tr:hover td{background:var(--s2)}
-.hdr-table td{padding:.5rem .6rem;vertical-align:top}
-.hdr-table td:first-child{
-  color:var(--acc);width:230px;
-  font-size:.7rem;white-space:nowrap;opacity:.85;
-}
-.hdr-table td:last-child{
-  color:var(--text);font-size:.72rem;
-  word-break:break-all;opacity:.8;
+.det-body.open { display:block; }
+.det-desc {
+  font-size:.72rem; color:var(--text2); line-height:1.75;
+  margin:.65rem 0 .85rem;
+  padding-left:.8rem; border-left:2px solid var(--b2);
 }
 
-/* ═══ SSL / DNS GRID ═══ */
-.meta-grid{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:.5rem;margin-bottom:1.5rem;
+.ev-table { width:100%; border-collapse:collapse; }
+.ev-table th {
+  font-size:.58rem; letter-spacing:.1em; color:var(--muted);
+  padding:.28rem .45rem; text-align:left; border-bottom:1px solid var(--b1);
 }
-.meta-box{
-  background:var(--s1);border:1px solid var(--b1);
-  padding:.9rem 1rem;
+.ev-table td {
+  font-size:.7rem; padding:.38rem .45rem;
+  border-bottom:1px solid rgba(22,45,66,.5); vertical-align:top;
 }
-.meta-box-title{
-  font-size:.6rem;letter-spacing:.14em;color:var(--muted);
-  margin-bottom:.7rem;padding-bottom:.4rem;
+.ev-table tr:last-child td { border-bottom:none; }
+.ev-table td:nth-child(1) { color:var(--acc);  width:85px;  }
+.ev-table td:nth-child(2) { color:var(--warn); width:190px; font-size:.66rem; word-break:break-all; }
+.ev-table td:nth-child(3) { color:var(--text2);word-break:break-all; }
+.ev-table td:nth-child(4) { color:var(--acc2); text-align:right; width:44px; font-size:.68rem; }
+
+/* ═══ NETWORK INTEL GRID ═══ */
+.net-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:.5rem; margin-bottom:1.2rem;
+}
+.net-box {
+  background:var(--s1); border:1px solid var(--b1);
+  padding:.85rem .95rem;
+}
+.net-box-title {
+  font-size:.58rem; letter-spacing:.15em; color:var(--muted);
+  margin-bottom:.65rem; padding-bottom:.4rem;
   border-bottom:1px solid var(--b1);
 }
-.meta-row{display:flex;justify-content:space-between;
-  gap:.5rem;margin-bottom:.3rem;font-size:.7rem}
-.meta-row-k{color:var(--muted)}
-.meta-row-v{color:var(--text);text-align:right;word-break:break-all;max-width:60%}
+.net-row { display:flex; justify-content:space-between; gap:.5rem; margin-bottom:.28rem; font-size:.69rem; }
+.net-key { color:var(--muted); flex-shrink:0; }
+.net-val { color:var(--text); text-align:right; word-break:break-all; max-width:60%; }
+.net-val.ok   { color:var(--acc2); }
+.net-val.bad  { color:var(--danger); }
+.net-val.info { color:var(--acc); }
+
+/* ═══ HEADERS TABLE ═══ */
+.hdr-table { width:100%; border-collapse:collapse; margin-bottom:1.2rem; }
+.hdr-table tr { border-bottom:1px solid rgba(22,45,66,.6); }
+.hdr-table tr:last-child { border-bottom:none; }
+.hdr-table tr:hover td { background:var(--s2); }
+.hdr-table td { padding:.45rem .55rem; vertical-align:top; }
+.hdr-table td:first-child {
+  color:var(--acc); width:240px; font-size:.68rem;
+  white-space:nowrap; opacity:.9;
+}
+.hdr-table td:last-child {
+  color:var(--text); font-size:.7rem; word-break:break-all;
+}
+
+/* ═══ EXPORT BAR ═══ */
+.export-bar {
+  display:flex; gap:.5rem; justify-content:flex-end;
+  margin-bottom:1.2rem;
+}
+.export-btn {
+  font-family:var(--mono); font-size:.64rem; letter-spacing:.1em;
+  color:var(--muted2); background:var(--s1);
+  border:1px solid var(--b1); padding:.35rem .8rem; cursor:pointer;
+  transition:all .18s; border-radius:var(--radius);
+}
+.export-btn:hover { border-color:var(--b2); color:var(--acc); }
 
 /* ═══ FOOTER ═══ */
-footer{
-  text-align:center;padding:3rem 0 1rem;
-  font-size:.65rem;color:var(--muted);letter-spacing:.1em;
+footer {
+  text-align:center; padding:3rem 0 1rem;
+  font-size:.62rem; color:var(--muted); letter-spacing:.1em;
 }
-footer span{color:var(--acc)}
+footer span { color:var(--acc); }
 
 /* ═══ ANIMATIONS ═══ */
-@keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
-@keyframes fadeUp  {from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none}}
-@keyframes spin    {to{transform:rotate(360deg)}}
+@keyframes fadeDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:none} }
+@keyframes fadeUp   { from{opacity:0;transform:translateY(12px)}  to{opacity:1;transform:none} }
+@keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes shimmer  { 0%{filter:brightness(1)} 50%{filter:brightness(1.15)} 100%{filter:brightness(1)} }
 
 /* ═══ RESPONSIVE ═══ */
-@media(max-width:600px){
-  .scan-row{flex-direction:column}
-  .probes-grid{grid-template-columns:1fr}
-  .meta-grid{grid-template-columns:1fr}
-  .ev-table td:nth-child(2){display:none}
+@media(max-width:640px) {
+  .scan-row       { flex-direction:column; }
+  .probes-grid    { grid-template-columns:1fr 1fr; }
+  .net-grid       { grid-template-columns:1fr; }
+  .ev-table td:nth-child(2) { display:none; }
+  .topbar-right   { display:none; }
+}
+@media(max-width:400px) {
+  .probes-grid    { grid-template-columns:1fr; }
 }
 </style>
 </head>
@@ -410,46 +462,69 @@ footer span{color:var(--acc)}
 
   <!-- TOP BAR -->
   <div class="topbar">
-    <div class="topbar-logo">WAFSCANNER</div>
+    <div class="topbar-logo">
+      <div class="topbar-logo-dot"></div>
+      WAFSCANNER
+    </div>
     <div class="topbar-right">
-      <span><span class="dot"></span> ENGINE ONLINE</span>
-      <span id="clock">--:--:--</span>
+      <div class="topbar-badge">ENGINE ONLINE</div>
+      <span class="ver" id="clock">--:--:--</span>
+      <span class="ver" id="dbCount"></span>
     </div>
   </div>
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-label">FIREWALL INTELLIGENCE SYSTEM</div>
+    <div class="hero-tag">
+      <span>◈</span> FIREWALL INTELLIGENCE PLATFORM v4.0
+    </div>
     <h1>WAF · IDS · IPS<br>DETECTOR</h1>
     <p class="hero-sub">
-      Multi-probe HTTP fingerprinting · Header / Cookie / Body analysis<br>
-      IP range matching · SSL inspection · Attack-probe confirmation
+      6-probe HTTP fingerprinting · 19-signature detection engine<br>
+      Header / Cookie / Body / IP-range / ASN analysis · Attack-probe confirmation
     </p>
+    <div class="hero-chips">
+      <span class="chip">CLOUDFLARE</span>
+      <span class="chip">AWS SHIELD</span>
+      <span class="chip">AKAMAI</span>
+      <span class="chip">IMPERVA</span>
+      <span class="chip">F5 BIG-IP</span>
+      <span class="chip">FORTINET</span>
+      <span class="chip">AZURE WAF</span>
+      <span class="chip">+12 MORE</span>
+    </div>
   </div>
 
-  <!-- SCANNER -->
+  <!-- SCANNER INPUT -->
   <div class="scanner">
+    <div class="scanner-label">// TARGET ACQUISITION</div>
     <div class="scan-row">
       <div class="url-wrap">
         <span class="url-prefix">⊳</span>
-        <input id="urlInput" type="text" placeholder="target-domain.com or https://...">
+        <input id="urlInput" type="text"
+               placeholder="example.com  ·  https://target-domain.com/path"
+               autocomplete="off" spellcheck="false"/>
       </div>
       <button class="scan-btn" id="scanBtn" onclick="startScan()">▶ SCAN</button>
     </div>
     <div class="examples">
-      Quick test:
+      Quick targets:
       <span class="ex" onclick="setUrl('cloudflare.com')">cloudflare.com</span>
       <span class="ex" onclick="setUrl('aws.amazon.com')">aws.amazon.com</span>
       <span class="ex" onclick="setUrl('imperva.com')">imperva.com</span>
       <span class="ex" onclick="setUrl('akamai.com')">akamai.com</span>
       <span class="ex" onclick="setUrl('sucuri.net')">sucuri.net</span>
+      <span class="ex" onclick="setUrl('azure.microsoft.com')">azure.microsoft.com</span>
     </div>
   </div>
 
-  <!-- PROBE STATUS -->
-  <div class="probe-status" id="probeStatus">
-    <div class="probe-title">// SCANNING IN PROGRESS</div>
-    <div class="probe-items" id="probeItems"></div>
+  <!-- PROGRESS -->
+  <div class="progress-panel" id="progressPanel">
+    <div class="progress-title">SCANNING IN PROGRESS</div>
+    <div class="step-list" id="stepList"></div>
+    <div class="scan-progress-bar">
+      <div class="scan-progress-fill" id="progressFill"></div>
+    </div>
   </div>
 
   <!-- ERROR -->
@@ -458,272 +533,373 @@ footer span{color:var(--acc)}
   <!-- RESULTS -->
   <div id="results">
 
+    <!-- Export -->
+    <div class="export-bar">
+      <button class="export-btn" onclick="exportJSON()">⬇ JSON</button>
+      <button class="export-btn" onclick="exportText()">⬇ TXT REPORT</button>
+    </div>
+
     <!-- Stats -->
-    <div class="stats-row" id="statsRow"></div>
+    <div class="stats-strip" id="statsStrip"></div>
+
+    <!-- Security score -->
+    <div class="sec-score-wrap" id="secScoreWrap">
+      <span class="sec-score-label">SECURITY HEADERS</span>
+      <div class="sec-score-bar">
+        <div class="sec-score-fill" id="secScoreFill"></div>
+      </div>
+      <span class="sec-score-val" id="secScoreVal"></span>
+    </div>
 
     <!-- Verdict -->
     <div id="verdictBox"></div>
 
-    <!-- Probe Results -->
+    <!-- Probe results -->
     <div class="sec-label">Probe Results</div>
     <div class="probes-grid" id="probesGrid"></div>
 
     <!-- Detections -->
     <div id="detectionsWrap"></div>
 
-    <!-- SSL + DNS -->
+    <!-- Network intelligence -->
     <div class="sec-label">Network Intelligence</div>
-    <div class="meta-grid" id="metaGrid"></div>
+    <div class="net-grid" id="netGrid"></div>
 
-    <!-- Headers -->
-    <div class="sec-label" id="headersLabel"></div>
-    <table class="hdr-table" id="headersTable"></table>
+    <!-- Notable headers -->
+    <div class="sec-label" id="hdrsLabel"></div>
+    <table class="hdr-table" id="hdrsTable"></table>
 
   </div>
 
 </div>
-
 <footer>
-  WAFSCANNER &nbsp;·&nbsp; <span>Multi-Probe Detection Engine</span> &nbsp;·&nbsp;
-  Authorized Security Testing Only
+  WAFSCANNER v4.0 &nbsp;·&nbsp; <span>19-Signature Detection Engine</span>
+  &nbsp;·&nbsp; Authorised Security Testing Only
 </footer>
 
 <script>
+/* ──────────────────────────────────────────────────────────────────────────
+   CONFIG
+────────────────────────────────────────────────────────────────────────── */
 const API = "http://localhost:5000";
 
-// Clock
+/* ──────────────────────────────────────────────────────────────────────────
+   CLOCK + INIT
+────────────────────────────────────────────────────────────────────────── */
 setInterval(()=>{
   document.getElementById("clock").textContent =
     new Date().toLocaleTimeString("en-GB");
-},1000);
+}, 1000);
 
-function setUrl(d){ document.getElementById("urlInput").value = d; }
-document.getElementById("urlInput").addEventListener("keydown",e=>{ if(e.key==="Enter") startScan(); });
+// Fetch engine health on load
+(async()=>{
+  try {
+    const r = await fetch(`${API}/api/health`);
+    const d = await r.json();
+    const sig_r = await fetch(`${API}/api/signatures`);
+    const sig_d = await sig_r.json();
+    document.getElementById("dbCount").textContent = `${sig_d.count} SIGS LOADED`;
+  } catch(e) {
+    document.getElementById("dbCount").textContent = "BACKEND OFFLINE";
+    document.getElementById("dbCount").style.color = "var(--danger)";
+  }
+})();
 
-// ── Probe animation steps ──────────────────────────────────────────────────
+/* ──────────────────────────────────────────────────────────────────────────
+   PROBE STEPS
+────────────────────────────────────────────────────────────────────────── */
 const STEPS = [
-  {key:"dns",   label:"Resolving DNS / IP address"},
-  {key:"ssl",   label:"Inspecting TLS certificate"},
-  {key:"normal",label:"Sending browser-like HTTP probe"},
-  {key:"attack",label:"Sending crafted WAF-trigger probe"},
-  {key:"404",   label:"Probing random 404 path"},
-  {key:"score", label:"Scoring signatures & fingerprints"},
-  {key:"done",  label:"Building report"},
+  { key:"dns",     label:"Resolving DNS & reverse PTR" },
+  { key:"ssl",     label:"Inspecting TLS certificate" },
+  { key:"normal",  label:"Browser-like HTTP probe" },
+  { key:"attack",  label:"Multi-vector attack probe (SQLi/XSS)" },
+  { key:"alt",     label:"Curl/Scanner agent probes" },
+  { key:"404",     label:"Random-path 404 probe" },
+  { key:"score",   label:"Signature scoring & fingerprinting" },
+  { key:"report",  label:"Building report" },
 ];
 
-function renderProbeSteps(){
-  document.getElementById("probeItems").innerHTML = STEPS.map((s,i)=>`
-    <div class="probe-item" id="step_${s.key}">
-      <div class="probe-dot idle" id="dot_${s.key}"></div>
-      <div class="probe-label">${s.label}</div>
-      <div class="probe-result" id="res_${s.key}"></div>
+function renderSteps(){
+  document.getElementById("stepList").innerHTML = STEPS.map((s,i)=>`
+    <div class="step-item" id="step_${s.key}">
+      <div class="step-dot idle" id="dot_${s.key}"></div>
+      <div class="step-label">${s.label}</div>
+      <div class="step-result" id="res_${s.key}"></div>
     </div>`).join("");
 }
-
 function stepRun(key){
   const d = document.getElementById(`dot_${key}`);
-  if(d){ d.className = "probe-dot running"; }
+  if(d) d.className = "step-dot running";
 }
 function stepDone(key, txt="", ok=true){
   const d = document.getElementById(`dot_${key}`);
   const r = document.getElementById(`res_${key}`);
-  if(d) d.className = "probe-dot " + (ok ? "done" : "fail");
+  if(d) d.className = "step-dot " + (ok ? "done" : "fail");
   if(r) r.textContent = txt;
 }
+function setProgress(pct){
+  document.getElementById("progressFill").style.width = pct+"%";
+}
 
-// ── Main scan ──────────────────────────────────────────────────────────────
+/* ──────────────────────────────────────────────────────────────────────────
+   HELPERS
+────────────────────────────────────────────────────────────────────────── */
+function setUrl(d){ document.getElementById("urlInput").value = d; }
+document.getElementById("urlInput").addEventListener("keydown", e=>{
+  if(e.key === "Enter") startScan();
+});
+function show(id){ document.getElementById(id).classList.add("show"); }
+function hide(id){ document.getElementById(id).classList.remove("show"); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function showError(msg){
+  const el = document.getElementById("errorBox");
+  el.innerHTML = `<strong>⚠ ERROR</strong><br>${esc(msg)}`;
+  el.classList.add("show");
+}
+function hideError(){ document.getElementById("errorBox").classList.remove("show"); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SCAN
+────────────────────────────────────────────────────────────────────────── */
+let lastResult = null;
+
 async function startScan(){
   const url = document.getElementById("urlInput").value.trim();
   if(!url){ showError("Enter a target URL or domain."); return; }
 
-  // reset
-  hideError(); hideResults();
-  document.getElementById("scanBtn").disabled = true;
-  renderProbeSteps();
-  show("probeStatus");
+  hideError();
+  document.getElementById("results").style.display = "none";
+  document.getElementById("results").classList.remove("show");
 
-  const delays = [0, 400, 800, 1400, 1900, 2500, 3200];
-  STEPS.forEach((s,i)=>{
+  const btn = document.getElementById("scanBtn");
+  btn.disabled = true; btn.textContent = "⏳ SCANNING";
+
+  renderSteps();
+  show("progressPanel");
+  setProgress(0);
+
+  // Animated step timing (frontend UX only — real scan runs in parallel on backend)
+  const delays   = [0, 350, 700, 1150, 1650, 2100, 2700, 3400];
+  const progress = [8,  18,  32,   48,   62,   75,   88,   95];
+
+  STEPS.forEach((s, i)=>{
     setTimeout(()=>{
       stepRun(s.key);
-      if(i>0) stepDone(STEPS[i-1].key,"✔");
+      setProgress(progress[i]);
+      if(i > 0) stepDone(STEPS[i-1].key, "✔");
     }, delays[i]);
   });
 
   try {
-    const res = await fetch(`${API}/api/detect`,{
+    const res = await fetch(`${API}/api/detect`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({url})
+      body:JSON.stringify({url}),
     });
-
-    if(!res.ok){ const e=await res.json(); throw new Error(e.error||"Server error"); }
+    if(!res.ok){
+      const e = await res.json().catch(()=>({}));
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
     const data = await res.json();
+    lastResult = data;
 
-    // Finish step animations
-    STEPS.forEach(s => stepDone(s.key,"✔"));
+    STEPS.forEach(s => stepDone(s.key, "✔"));
+    setProgress(100);
 
     setTimeout(()=>{
-      hide("probeStatus");
-      if(!data.success){ showError(data.error||"Unknown error"); return; }
-      renderResults(data);
-    }, 400);
+      hide("progressPanel");
+      if(!data.success){ showError(data.error || "Unknown error"); return; }
+      renderAll(data);
+    }, 450);
 
   } catch(err){
-    STEPS.forEach(s => stepDone(s.key,"✘",false));
+    STEPS.forEach(s => stepDone(s.key, "✘", false));
+    setProgress(100);
     setTimeout(()=>{
-      hide("probeStatus");
+      hide("progressPanel");
       showError(err.message || "Cannot connect to backend. Ensure Python server is running on port 5000.");
-    },300);
+    }, 300);
   } finally {
-    document.getElementById("scanBtn").disabled = false;
+    btn.disabled = false; btn.textContent = "▶ SCAN";
   }
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function renderResults(d){
+/* ──────────────────────────────────────────────────────────────────────────
+   RENDER ALL
+────────────────────────────────────────────────────────────────────────── */
+function renderAll(d){
   renderStats(d);
+  renderSecScore(d);
   renderVerdict(d);
   renderProbes(d);
   renderDetections(d);
-  renderMeta(d);
+  renderNetwork(d);
   renderHeaders(d);
-  showResults();
+  const el = document.getElementById("results");
+  el.style.display = "block";
+  el.classList.add("show");
 }
 
+/* Stats strip */
 function renderStats(d){
   const ms = d.elapsed_ms;
-  const msClass = ms < 400 ? "ok" : ms < 1000 ? "warn" : "bad";
-  const tls = d.tls;
-  document.getElementById("statsRow").innerHTML = [
-    {l:"HOST",    v:d.hostname,             c:"info"},
-    {l:"IP",      v:d.dns?.ipv4||"—",       c:""},
-    {l:"STATUS",  v:d.status_code,          c:d.status_code<400?"ok":"bad"},
-    {l:"LATENCY", v:ms+"ms",                c:msClass},
-    {l:"TLS",     v:tls?"✔ HTTPS":"✘ HTTP", c:tls?"ok":"bad"},
-    {l:"SERVER",  v:d.server||"—",          c:""},
-    {l:"REDIRECTS",v:d.redirect_count,      c:""},
-    {l:"HEADERS", v:d.all_headers_count+" found", c:""},
+  const msC = ms < 500 ? "ok" : ms < 1200 ? "warn" : "bad";
+  document.getElementById("statsStrip").innerHTML = [
+    { l:"HOST",        v:d.hostname,                     c:"info" },
+    { l:"IP",          v:d.dns?.ipv4||"—",               c:"" },
+    { l:"STATUS",      v:d.status_code,                  c:d.status_code<400?"ok":"bad" },
+    { l:"LATENCY",     v:ms+"ms",                        c:msC },
+    { l:"TLS",         v:d.tls?"✔ HTTPS":"✘ HTTP",       c:d.tls?"ok":"bad" },
+    { l:"SERVER",      v:d.server||"—",                  c:"" },
+    { l:"REDIRECTS",   v:d.redirect_count,               c:"" },
+    { l:"HEADERS",     v:d.all_headers_count+" found",   c:"" },
+    { l:"CDN HINT",    v:d.cdn_hint||"—",                c:d.cdn_hint?"info":"" },
+    { l:"SCAN TIME",   v:new Date(d.timestamp||Date.now()).toLocaleTimeString("en-GB"), c:"" },
   ].map(x=>`
     <div class="stat">
       <div class="stat-label">${x.l}</div>
-      <div class="stat-value ${x.c}">${x.v}</div>
+      <div class="stat-val ${x.c}">${esc(String(x.v))}</div>
     </div>`).join("");
 }
 
+/* Security score bar */
+function renderSecScore(d){
+  const score = d.security_score ?? 0;
+  const color = score >= 70 ? "var(--acc2)" : score >= 40 ? "var(--warn)" : "var(--danger)";
+  document.getElementById("secScoreFill").style.cssText = `width:${score}%;background:${color}`;
+  const valEl = document.getElementById("secScoreVal");
+  valEl.textContent = score + "% (" + secScoreGrade(score) + ")";
+  valEl.style.color = color;
+}
+function secScoreGrade(s){ return s>=80?"STRONG":s>=60?"MODERATE":s>=40?"WEAK":"POOR"; }
+
+/* Verdict */
 function renderVerdict(d){
   const el = document.getElementById("verdictBox");
   if(d.waf_detected){
     const names = d.detections.map(x=>x.name).join(" · ");
+    const blocked = d.attack_blocked || d.scanner_blocked;
+    const blockStatus = d.attack_blocked ? d.attack_probe_status : d.scanner_probe_status;
     el.innerHTML=`
       <div class="verdict waf">
-        ${d.attack_blocked?'<div class="blocked-badge">ATTACK PROBE BLOCKED</div>':''}
-        <div class="verdict-glyph">🔰</div>
+        ${blocked?`<div class="badge-blocked">ATTACK PROBE BLOCKED ▸ HTTP ${blockStatus}</div>`:""}
+        <div class="verdict-icon">🔰</div>
         <div>
           <div class="verdict-head">WAF / SECURITY LAYER DETECTED</div>
-          <div class="verdict-meta">
-            ${d.detections.length} system(s) identified &nbsp;|&nbsp; ${names}<br>
-            ${d.attack_blocked?"Attack probe returned HTTP "+d.attack_probe_status+" — confirms active blocking.":"Attack probe not conclusively blocked."}
+          <div class="verdict-sub">
+            ${d.detections.length} system(s) identified &nbsp;|&nbsp; ${esc(names)}<br>
+            ${blocked
+              ? `Attack / scanner probe returned HTTP ${blockStatus} — confirms active blocking.`
+              : "Blocking not conclusively confirmed by probe response codes."}
+            ${d.cdn_hint ? `<br>PTR record suggests: <strong style="color:var(--acc)">${esc(d.cdn_hint)}</strong>` : ""}
           </div>
         </div>
       </div>`;
-  } else if(d.attack_blocked){
+  } else if(d.attack_blocked || d.scanner_blocked){
+    const st = d.attack_blocked ? d.attack_probe_status : d.scanner_probe_status;
     el.innerHTML=`
       <div class="verdict warn-mode">
-        <div class="verdict-glyph">⚠️</div>
+        <div class="verdict-icon">⚠️</div>
         <div>
           <div class="verdict-head">UNKNOWN PROTECTION DETECTED</div>
-          <div class="verdict-meta">
-            Attack probe was blocked (HTTP ${d.attack_probe_status}) but no known WAF signature matched.<br>
-            Possible custom WAF, rate-limiter, or firewall in stealth mode.
+          <div class="verdict-sub">
+            Probe was blocked (HTTP ${st}) but no known WAF signature matched.<br>
+            Likely a custom WAF, rate-limiter, or firewall operating in stealth mode.
           </div>
         </div>
       </div>`;
   } else {
+    const probeCount = Object.values(d.probes_ok).filter(Boolean).length;
     el.innerHTML=`
       <div class="verdict nowaf">
-        <div class="verdict-glyph">⬜</div>
+        <div class="verdict-icon">⬜</div>
         <div>
           <div class="verdict-head">NO WAF SIGNATURE DETECTED</div>
-          <div class="verdict-meta">
-            No known WAF/IDS/IPS fingerprints found across ${Object.values(d.probes_ok).filter(Boolean).length} probes.<br>
-            May be unprotected, using a custom WAF, or operating in stealth/passthrough mode.
+          <div class="verdict-sub">
+            No known WAF/IDS/IPS fingerprints found across ${probeCount} successful probes.<br>
+            May be unprotected, using a custom/private WAF, or operating in passthrough/stealth mode.
           </div>
         </div>
       </div>`;
   }
 }
 
+/* Probe results */
+const PROBE_META = {
+  normal:  { label:"Browser Probe",     desc:"Standard GET, browser UA" },
+  attack:  { label:"Attack Probe",      desc:"SQLi + XSS + traversal payload" },
+  "404":   { label:"404 Probe",         desc:"Randomised nonexistent path" },
+  curl:    { label:"Curl-Agent Probe",  desc:"curl/8.4 user-agent" },
+  scanner: { label:"Scanner Probe",     desc:"Nikto/2.1.6 user-agent" },
+  options: { label:"OPTIONS Probe",     desc:"HTTP OPTIONS method" },
+};
+
 function renderProbes(d){
-  const probeInfo = {
-    normal: { label:"Browser HTTP Probe",  desc:"Standard GET request" },
-    attack: { label:"WAF Trigger Probe",   desc:"Crafted SQLi + XSS payload" },
-    "404":  { label:"404 Path Probe",      desc:"Non-existent path scan" },
-  };
   document.getElementById("probesGrid").innerHTML =
-    Object.entries(d.probes_ok).map(([k,ok])=>{
-      const info = probeInfo[k] || {label:k, desc:""};
-      const statusClass = ok ? "ok" : "bad";
-      const statusText  = ok ? "SUCCESS" : "FAILED";
+    Object.entries(d.probes_ok).map(([k, ok])=>{
+      const m = PROBE_META[k] || { label:k, desc:"" };
+      const code = d.probe_statuses?.[k];
+      const codeTxt = code != null ? `HTTP ${code}` : "—";
+      const isBlock = [403,406,429,503,412,418].includes(code);
+      const stClass = !ok ? "bad" : isBlock ? "warn" : "ok";
+      const stText  = !ok ? "FAILED" : isBlock ? "BLOCKED" : "SUCCESS";
       return `
         <div class="probe-cell">
-          <div class="probe-cell-label">${info.label}</div>
-          <div class="probe-cell-status ${statusClass}">${statusText}</div>
-          <div class="probe-cell-detail">${info.desc}</div>
+          <div class="probe-cell-top">
+            <div class="probe-cell-name">${m.label}</div>
+            <div class="probe-cell-code">${codeTxt}</div>
+          </div>
+          <div class="probe-cell-stat ${stClass}">${stText}</div>
+          <div class="probe-cell-desc">${m.desc}</div>
         </div>`;
     }).join("");
 }
 
+/* Detection cards */
 function renderDetections(d){
   const wrap = document.getElementById("detectionsWrap");
   if(!d.detections.length){ wrap.innerHTML=""; return; }
-
   wrap.innerHTML = `
     <div class="sec-label">Detected Systems (${d.detections.length})</div>
     <div class="det-list">
       ${d.detections.map((det,i)=>detCard(det,i)).join("")}
     </div>`;
-
-  // Animate bars
   setTimeout(()=>{
     d.detections.forEach((det,i)=>{
-      const bar = document.getElementById(`bar_${i}`);
-      if(bar){ bar.style.width = det.confidence + "%"; bar.style.background = det.color; }
+      const bar = document.getElementById(`cfill_${i}`);
+      if(bar){ bar.style.width=det.confidence+"%"; bar.style.background=det.color; }
     });
   }, 100);
 }
 
 function detCard(det, i){
-  const evRows = det.evidence.map(e=>`
+  const rows = det.evidence.map(e=>`
     <tr>
-      <td>${e.type}</td>
+      <td>${esc(e.type)}</td>
       <td>${esc(e.key)}</td>
       <td>${esc(e.value)}</td>
       <td>+${e.weight}</td>
     </tr>`).join("");
-
   return `
     <div class="det-card">
       <div class="det-head" onclick="toggleCard(${i})">
         <div class="det-icon">${det.icon}</div>
         <div class="det-info">
-          <div class="det-name" style="color:${det.color}">${det.name}</div>
-          <div class="det-cat">${det.category}</div>
+          <div class="det-name" style="color:${det.color}">${esc(det.name)}</div>
+          <div class="det-cat">${esc(det.category)}</div>
         </div>
         <div class="det-right">
-          <div class="conf-num" style="color:${det.color}">${det.confidence}%</div>
-          <div class="conf-bar-bg">
-            <div class="conf-bar-fill" id="bar_${i}"></div>
-          </div>
-          <div class="ev-count">${det.evidence.length} signals · score ${det.score}</div>
+          <div class="conf-pct" style="color:${det.color}">${det.confidence}%</div>
+          <div class="conf-bar"><div class="conf-fill" id="cfill_${i}"></div></div>
+          <div class="ev-tag">${det.evidence.length} signals · score ${det.score}</div>
         </div>
-        <div class="det-chevron" id="chev_${i}">▼</div>
+        <div class="det-chev" id="chev_${i}">▼</div>
       </div>
       <div class="det-body" id="body_${i}">
-        <div class="det-desc">${det.description}</div>
+        <div class="det-desc">${esc(det.description)}</div>
         <table class="ev-table">
           <thead><tr><th>TYPE</th><th>KEY</th><th>VALUE</th><th>WT</th></tr></thead>
-          <tbody>${evRows}</tbody>
+          <tbody>${rows}</tbody>
         </table>
       </div>
     </div>`;
@@ -736,59 +912,95 @@ function toggleCard(i){
   chev.classList.toggle("open", open);
 }
 
-function renderMeta(d){
-  const ssl = d.ssl || {};
-  const dns = d.dns || {};
+/* Network intelligence */
+function renderNetwork(d){
+  const ssl = d.ssl  || {};
+  const dns = d.dns  || {};
+  function row(k,v,c=""){ return `<div class="net-row"><span class="net-key">${k}</span><span class="net-val ${c}">${esc(String(v))}</span></div>`; }
 
-  document.getElementById("metaGrid").innerHTML = `
-    <div class="meta-box">
-      <div class="meta-box-title">// SSL / TLS CERTIFICATE</div>
-      ${metaRow("Valid", ssl.valid ? "✔ Yes" : "✘ No / Error")}
-      ${metaRow("Issuer", ssl.issuer || "—")}
-      ${metaRow("Subject", ssl.subject || "—")}
-      ${metaRow("Expires", ssl.expires || "—")}
-      ${metaRow("SAN Count", ssl.san ? ssl.san.length : "—")}
-      ${ssl.error ? metaRow("Note", ssl.error.slice(0,60)) : ""}
+  document.getElementById("netGrid").innerHTML = `
+    <div class="net-box">
+      <div class="net-box-title">// SSL / TLS CERTIFICATE</div>
+      ${row("Valid",      ssl.valid?"✔ Yes":"✘ No / Error", ssl.valid?"ok":"bad")}
+      ${row("TLS Version",ssl.version||"—", ssl.version?"info":"")}
+      ${row("Issuer",     ssl.issuer||"—")}
+      ${row("Subject",    ssl.subject||"—")}
+      ${row("Expires",    ssl.expires||"—")}
+      ${row("Not Before", ssl.not_before||"—")}
+      ${row("SANs",       ssl.san?.length??0)}
+      ${ssl.error?row("Note",ssl.error.slice(0,70)):""}
     </div>
-    <div class="meta-box">
-      <div class="meta-box-title">// DNS RESOLUTION</div>
-      ${metaRow("IPv4", dns.ipv4 || "—")}
-      ${metaRow("IPv6", dns.ipv6 || "—")}
-      ${metaRow("All IPs", dns.all_ips ? dns.all_ips.join(", ") : "—")}
-      ${metaRow("Redirects", d.redirect_count)}
-      ${metaRow("Final URL", d.final_url ? d.final_url.slice(0,50) : "—")}
+    <div class="net-box">
+      <div class="net-box-title">// DNS RESOLUTION</div>
+      ${row("IPv4",       dns.ipv4||"—", dns.ipv4?"info":"")}
+      ${row("IPv6",       dns.ipv6||"—")}
+      ${row("PTR Record", dns.ptr||"—")}
+      ${row("All IPs",    dns.all_ips?.join(", ")||"—")}
+      ${row("Redirects",  d.redirect_count)}
+      ${row("Final URL",  (d.final_url||"—").slice(0,55))}
+      ${row("CDN Hint",   d.cdn_hint||"—", d.cdn_hint?"info":"")}
     </div>`;
 }
 
-function metaRow(k, v){
-  return `<div class="meta-row"><span class="meta-row-k">${k}</span><span class="meta-row-v">${esc(String(v))}</span></div>`;
-}
-
+/* Headers */
 function renderHeaders(d){
-  const hdrs = d.notable_headers || {};
-  const entries = Object.entries(hdrs);
-  document.getElementById("headersLabel").textContent =
-    `Notable Headers (${entries.length})`;
-  document.getElementById("headersTable").innerHTML =
-    entries.map(([k,v])=>`
-      <tr>
-        <td>${esc(k)}</td>
-        <td>${esc(v)}</td>
-      </tr>`).join("");
+  const entries = Object.entries(d.notable_headers||{});
+  document.getElementById("hdrsLabel").textContent = `Notable Headers (${entries.length})`;
+  document.getElementById("hdrsTable").innerHTML = entries.map(([k,v])=>`
+    <tr>
+      <td>${esc(k)}</td>
+      <td>${esc(v)}</td>
+    </tr>`).join("");
 }
 
-// ── UI helpers ─────────────────────────────────────────────────────────────
-function show(id){ document.getElementById(id).classList.add("show") }
-function hide(id){ document.getElementById(id).classList.remove("show") }
-function showResults(){ document.getElementById("results").style.display="block" }
-function hideResults(){ document.getElementById("results").style.display="none" }
-function showError(msg){
-  const el = document.getElementById("errorBox");
-  el.innerHTML = `<strong>⚠ ERROR</strong><br>${esc(msg)}`;
-  el.classList.add("show");
+/* ──────────────────────────────────────────────────────────────────────────
+   EXPORT
+────────────────────────────────────────────────────────────────────────── */
+function exportJSON(){
+  if(!lastResult) return;
+  const blob = new Blob([JSON.stringify(lastResult, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `waf-scan-${lastResult.hostname}-${Date.now()}.json`;
+  a.click();
 }
-function hideError(){ document.getElementById("errorBox").classList.remove("show") }
-function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") }
+
+function exportText(){
+  if(!lastResult) return;
+  const d = lastResult;
+  const lines = [
+    "═══════════════════════════════════════════════════════",
+    "  WAFSCANNER v4.0  —  Advanced WAF / IDS / IPS Report",
+    "═══════════════════════════════════════════════════════",
+    `  Target   : ${d.url}`,
+    `  Hostname : ${d.hostname}`,
+    `  Scan Time: ${d.timestamp}`,
+    `  IPv4     : ${d.dns?.ipv4||"—"}`,
+    `  Status   : HTTP ${d.status_code}`,
+    `  Latency  : ${d.elapsed_ms}ms`,
+    `  TLS      : ${d.tls?"HTTPS":"HTTP"}`,
+    `  Server   : ${d.server||"—"}`,
+    "───────────────────────────────────────────────────────",
+    `  WAF DETECTED : ${d.waf_detected ? "YES" : "NO"}`,
+    `  ATTACK BLOCKED : ${d.attack_blocked ? "YES (HTTP "+d.attack_probe_status+")" : "NO"}`,
+    `  SCANNER BLOCKED: ${d.scanner_blocked ? "YES (HTTP "+d.scanner_probe_status+")" : "NO"}`,
+    "───────────────────────────────────────────────────────",
+    ...(d.detections.length
+      ? ["  DETECTIONS:", ...d.detections.map(det=>
+          `    [${det.confidence}%] ${det.name} — ${det.category} (score: ${det.score})`
+        )]
+      : ["  No known WAF signatures detected."]),
+    "───────────────────────────────────────────────────────",
+    "  NOTABLE HEADERS:",
+    ...Object.entries(d.notable_headers||{}).map(([k,v])=>`    ${k}: ${v}`),
+    "═══════════════════════════════════════════════════════",
+  ];
+  const blob = new Blob([lines.join("\n")], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `waf-scan-${d.hostname}-${Date.now()}.txt`;
+  a.click();
+}
 </script>
 </body>
 </html>
